@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Spinner } from '@/app/utills/Spinner';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -7,7 +7,7 @@ import { Product } from '@/app/types/productTypes';
 import Button from '@/app/utills/Button';
 import Select from 'react-select';
 
-export default function EditProduct() {
+function EditProductContent() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,7 +16,8 @@ export default function EditProduct() {
   const [error, setError] = useState<string>('');
 
   const router = useRouter();
-  const slug = useSearchParams().get('slug');
+  const searchParams = useSearchParams();
+  const slug = searchParams.get('slug');
 
   const fetchProduct = useCallback(async () => {
     if (!slug) return;
@@ -170,5 +171,13 @@ export default function EditProduct() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EditProduct() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <EditProductContent />
+    </Suspense>
   );
 }

@@ -95,33 +95,20 @@ export default function Properties() {
                         <div className="text-sm font-medium text-gray-900">{index + 1}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{property.propertyName}</div>
+                        <div className="text-sm font-medium text-gray-900">{property.productName}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                      {Array.isArray(property?.areaDetails)
+                      {/* {Array.isArray(property?.areaDetails)
                         ? property?.areaDetails.map((item, index) => item.city).join(", ")
-                        : property?.areaDetails?.city}
+                        : property?.areaDetails?.city} */}
                     </div>
                       </td>
-                      {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{property.reraNo}</div>
-                  </td> */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{property.bhkDetails.map(bhk => `${bhk.type}`).join(', ')}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{property.propertyPrice}</div>
-                      </td>
-                      {/* <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {property?.status}
-                        </span>
-                      </td> */}
+                    
 
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {property?.propertyStatus}
+                          {property?.productStatus}
                         </span>
                       </td>
 
@@ -132,7 +119,7 @@ export default function Properties() {
                         <DropdownMenu
                           buttonContent={<span>•••</span>} 
                         >
-                          <button
+                          {/* <button
                             onClick={() => {
                               router.push(`/admin/properties/edit?slug=${decodeURIComponent(property.urlSlug)}`);
                             }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -141,7 +128,7 @@ export default function Properties() {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                             </svg>
                             Edit
-                          </button>
+                          </button> */}
                           <button
                             onClick={() => {
                               setPropertyToDelete(property._id);
