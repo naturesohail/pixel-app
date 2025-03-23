@@ -99,7 +99,9 @@ export default function page(){
                                     src="/assets/images/white-logo.png"
                                     alt="hexashop ecommerce templatemo"
                                 /> */}
-                                MDC
+                                <span style={{color:"white"}}> 
+                                                                 MDC
+                                </span>
                             </div>
                             <ul>
                                 <li>

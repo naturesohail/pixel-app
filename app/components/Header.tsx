@@ -8,7 +8,9 @@ export default function Page() {
                     <div className="col-12">
                         <nav className="main-nav">
                             <Link href="/" className="logo">
-                            MDC
+                            <span style={{color:"black"}}> 
+                                                                 MDC
+                                </span>
                             </Link>
                             <ul className="nav">
                                 <li className="scroll-to-section">
