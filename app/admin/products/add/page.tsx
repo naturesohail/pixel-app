@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/app/utills/Spinner';
 import Button from '@/app/utills/Button';
+import AdminLayout from '@/app/layouts/AdminLayout';
 
 export default function AddProduct() {
   const [productName, setProductName] = useState('');
@@ -61,7 +62,10 @@ export default function AddProduct() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <AdminLayout>
+
+
+<div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto bg-white rounded-lg shadow px-6 py-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-8">Add New Product</h2>
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleSubmit}>
@@ -126,5 +130,6 @@ export default function AddProduct() {
         </form>
       </div>
     </div>
+    </AdminLayout>
   );
 }

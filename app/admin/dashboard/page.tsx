@@ -1,4 +1,5 @@
 'use client';
+import AdminLayout from '@/app/layouts/AdminLayout';
 import { HomeIcon, BuildingOfficeIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -26,7 +27,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div>
+    <AdminLayout>
       <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
       
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -79,6 +80,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

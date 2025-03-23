@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Product } from '@/app/types/productTypes';
 import Button from '@/app/utills/Button';
 import Select from 'react-select';
-
+import AdminLayout from '@/app/layouts/AdminLayout';
 function EditProductContent() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -70,7 +70,7 @@ function EditProductContent() {
   };
 
   return (
-    <div>
+    <AdminLayout>
       {isLoading ? (
         <Spinner />
       ) : (
@@ -170,7 +170,7 @@ function EditProductContent() {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 }
 

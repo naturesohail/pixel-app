@@ -1,4 +1,5 @@
 'use client';
+import AdminLayout from '@/app/layouts/AdminLayout';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 
 export default function Clients() {
@@ -16,7 +17,7 @@ export default function Clients() {
   ];
 
   return (
-    <div>
+    <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
       </div>
@@ -69,6 +70,6 @@ export default function Clients() {
           </table>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

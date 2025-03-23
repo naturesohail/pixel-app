@@ -1,8 +1,9 @@
 "use client"
 import React, { useState, useEffect } from 'react';
+import AdminLayout from "@/app/layouts/AdminLayout"
+
 import { Dialog } from '@headlessui/react';
 import { PlusIcon } from '@heroicons/react/24/outline';
-
 // interface Property {
 //   _id: string;
 //   propertyName: string;
@@ -157,7 +158,7 @@ export default function Queries() {
   // };
 
   return (
-    <div>
+    <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Queries</h1>
        
@@ -203,6 +204,6 @@ export default function Queries() {
 
 
 
-    </div>
+    </AdminLayout>
   );
 }

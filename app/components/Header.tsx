@@ -25,7 +25,7 @@ export default function Page() {
                                 <li>
                                     <Link href="products">Products</Link>
                                 </li>
-
+                                
                                 <li>
                                     <Link href="contact">Contact Us</Link>
                                 </li>

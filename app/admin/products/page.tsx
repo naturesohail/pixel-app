@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Product } from '@/app/types/productTypes';
 import { Spinner } from '@/app/utills/Spinner';
 import DropdownMenu from '@/app/components/admin/DropdownComponent';
+import AdminLayout from '@/app/layouts/AdminLayout';
 
 
 export default function Properties() {
@@ -50,7 +51,7 @@ export default function Properties() {
   };
 
   return (
-    <div>
+    <AdminLayout>
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Properties</h1>
@@ -189,6 +190,6 @@ export default function Properties() {
       </Dialog>
 
 
-    </div>
+    </AdminLayout>
   );
 }
