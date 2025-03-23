@@ -95,10 +95,11 @@ export default function page(){
                     <div className="col-lg-6">
                         <div className="first-item">
                             <div className="logo">
-                                <img
+                                {/* <img
                                     src="/assets/images/white-logo.png"
                                     alt="hexashop ecommerce templatemo"
-                                />
+                                /> */}
+                                MDC
                             </div>
                             <ul>
                                 <li>

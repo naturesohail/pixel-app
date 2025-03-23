@@ -8,7 +8,7 @@ export default function Page() {
                     <div className="col-12">
                         <nav className="main-nav">
                             <Link href="/" className="logo">
-                                <img src="/assets/images/logo.png" />
+                            MDC
                             </Link>
                             <ul className="nav">
                                 <li className="scroll-to-section">
