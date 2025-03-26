@@ -1,74 +1,166 @@
 'use client';
-import AdminLayout from '@/app/layouts/AdminLayout';
-import { UserGroupIcon } from '@heroicons/react/24/outline';
 
-export default function Clients() {
-  const clients = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1 234 567 890',
-      type: 'Buyer',
-      interests: 'Residential',
-      status: 'Active',
-    },
-    // Add more sample clients here
-  ];
+import { useState, useEffect } from 'react';
+import AdminLayout from '@/app/layouts/AdminLayout';
+import Image from 'next/image';
+import { TrashIcon, PencilIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { Spinner } from '@/app/utills/Spinner';
+
+interface Category {
+  _id: string;
+  category: string;
+  image: string;
+}
+
+export default function Categories() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    const res = await fetch('/api/categories');
+    const data = await res.json();
+    setCategories(data);
+    setIsLoading(false);
+  };
+
+  const handleAddEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProcessing(true);
+    const formData = new FormData();
+    formData.append('category', categoryName);
+    if (image) formData.append('image', image);
+
+    const method = editMode ? 'PUT' : 'POST';
+    const url = editMode ? `/api/categories?id=${selectedCategory?._id}` : '/api/categories';
+
+    const res = await fetch(url, { method, body: formData });
+    if (res.ok) {
+      fetchCategories();
+      closeModal();
+    }
+    setProcessing(false);
+  };
+
+  const handleDelete = async () => {
+    if (categoryToDelete) {
+      const res = await fetch(`/api/categories?id=${categoryToDelete._id}`, { method: 'DELETE' });
+      if (res.ok) fetchCategories();
+    }
+    setShowDeleteModal(false);
+  };
+
+  const openModal = (category: Category | null = null) => {
+    setSelectedCategory(category);
+    setCategoryName(category ? category.category : '');
+    setEditMode(!!category);
+    setShowModal(true);
+    setImagePreview(category ? category.image : null);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setCategoryName('');
+    setImage(null);
+    setImagePreview(null);
+    setEditMode(false);
+    setProcessing(false);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImage(file);
+    setImagePreview(file ? URL.createObjectURL(file) : null);
+  };
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interests</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {clients.map((client) => (
-                <tr key={client.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <UserGroupIcon className="h-6 w-6 text-gray-500" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{client.name}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.email}</div>
-                    <div className="text-sm text-gray-500">{client.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.type}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.interests}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                      {client.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="max-w-8xl mx-auto p-6 bg-white shadow rounded-lg">
+        <div className="flex justify-between mb-4">
+          <h1 className="text-2xl font-bold">Categories</h1>
+          <button onClick={() => openModal()} className="bg-blue-500 text-white px-4 py-2 rounded flex items-center">
+            <PlusIcon className="w-5 h-5 mr-1" /> Add Category
+          </button>
         </div>
+
+        <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left">#</th>
+            <th className="px-6 py-3 text-left">Category</th>
+            <th className="px-6 py-3 text-center">Image</th>
+            <th className="px-6 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {isLoading ? (
+            <tr>
+              <td colSpan={4} className="text-center py-4">
+                <Spinner />
+              </td>
+            </tr>
+          ) : (
+            categories.map((category, index) => (
+              <tr key={category._id} className="hover:bg-gray-100">
+                <td className="px-6 py-4 text-left">{index + 1}</td>
+                <td className="px-6 py-4 text-left">{category.category}</td>
+                <td className="px-6 py-4 text-right">
+                  <Image src={category.image} alt={category.category} width={50} height={50} />
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button onClick={() => openModal(category)} className="text-blue-500 mr-5">
+                    <PencilIcon className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => { setCategoryToDelete(category); setShowDeleteModal(true); }} className="text-red-500">
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+       </table>
+
+        {showModal && (
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg">
+              <h2 className="text-xl font-bold mb-4">{editMode ? 'Edit Category' : 'Add Category'}</h2>
+              <form onSubmit={handleAddEditCategory}>
+                <input type="text" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Category Name" className="border p-4 w-full mb-4" required />
+                <input type="file" onChange={handleImageChange} className="border p-2 w-full mb-4" />
+                {imagePreview && <Image src={imagePreview} alt="Preview" width={100} height={100} className="mb-4" />}
+                <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded mr-2" disabled={processing}>{processing ? 'Processing...' : 'Save'}</button>
+                <button type="button" onClick={closeModal} className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg">
+              <h2 className="text-xl font-bold mb-4">Confirm Delete</h2>
+              <p>Are you sure you want to delete this category?</p>
+              <div className="mt-4">
+                <button onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded mr-2">Delete</button>
+                <button onClick={() => setShowDeleteModal(false)} className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

@@ -2,56 +2,88 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import Product from "@/app/lib/models/productModel";
-import path from "path";
-import { writeFile } from "fs/promises";
 import { MONGO_URI } from "@/app/lib/db";
+import { v2 as cloudinary } from "cloudinary";
+import streamifier from "streamifier";
 
-const uploadDir = path.join(process.cwd(), "public/uploads/products");
+cloudinary.config({
+  cloud_name: "dtc1nqk9g",
+  api_key: "988391113487354",
+  api_secret: "o8IkkQeCn8vFEmG2gI6saI1R6mo",
+});
 
+// Upload image to Cloudinary
+const uploadToCloudinary = async (file, folder) => {
+  if (!file) return "";
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
+
+// Connect to MongoDB
 async function connectDB() {
   if (mongoose.connection.readyState === 1) return;
   await mongoose.connect(MONGO_URI);
 }
 
+// ✅ Fetch all products
 export async function GET() {
   await connectDB();
   const products = await Product.find();
   return NextResponse.json(products);
 }
 
+
+// ✅ Create a new pixel product
 export async function POST(request) {
   await connectDB();
 
   try {
     const formData = await request.formData();
-    
     const productName = formData.get("productName");
-    const categories = formData.get("categories");
-    const image = formData.get("productImage");
     const description = formData.get("description");
-    const price = formData.get("price");
+    const price = parseFloat(formData.get("price"));
     const productStatus = formData.get("productStatus");
+    const categoryId = formData.get("categoryId");
+    const xPosition = parseInt(formData.get("xPosition"));
+    const yPosition = parseInt(formData.get("yPosition"));
+    const width = parseInt(formData.get("width")) || 1;
+    const height = parseInt(formData.get("height")) || 1;
+    const auctionType = formData.get("auctionType");
 
-    let publicPath = "";
+    let imageUrl = "";
+    const image = formData.get("image");
     if (image) {
-      const fileName = `${Date.now()}-${image.name}`;
-      const filePath = `${uploadDir}/${fileName}`;
-      publicPath = `/uploads/products/${fileName}`;
-      await writeFile(filePath, Buffer.from(await image.arrayBuffer()));
+      imageUrl = await uploadToCloudinary(image, "products");
     }
 
-    const data = {
+    const newProduct = await Product.create({
       productName,
-      categories,
-      image: publicPath,
       description,
       price,
       productStatus,
-    };
+      categoryId,
+      xPosition,
+      yPosition,
+      width,
+      height,
+      auctionType,
+      currentBid: auctionType === "auction" ? 0 : null,
+      image: imageUrl,
+    });
 
-    console.log("Saving Product Data:", data);
-
-    const newProduct = await Product.create(data);
     return NextResponse.json(newProduct, { status: 201 });
   } catch (error) {
     console.error("Error adding Product:", error);
@@ -59,47 +91,58 @@ export async function POST(request) {
   }
 }
 
+// ✅ Update an existing pixel product
 export async function PUT(request) {
   await connectDB();
-  
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid Product ID" }, { status: 400 });
     }
 
     const formData = await request.formData();
     const productName = formData.get("productName");
-    const categories = formData.get("categories");
-    const image = formData.get("productImage");
     const description = formData.get("description");
-    const price = formData.get("price");
+    const price = parseFloat(formData.get("price"));
     const productStatus = formData.get("productStatus");
+    const categoryId = formData.get("categoryId");
+    const xPosition = parseInt(formData.get("xPosition"));
+    const yPosition = parseInt(formData.get("yPosition"));
+    const width = parseInt(formData.get("width")) || 1;
+    const height = parseInt(formData.get("height")) || 1;
+    const auctionType = formData.get("auctionType");
 
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    let publicPath = existingProduct.image;
+    let imageUrl = existingProduct.image;
+    const image = formData.get("image");
     if (image) {
-      const fileName = `${Date.now()}-${image.name}`;
-      const filePath = `${uploadDir}/${fileName}`;
-      publicPath = `/uploads/products/${fileName}`;
-      await writeFile(filePath, Buffer.from(await image.arrayBuffer()));
+      imageUrl = await uploadToCloudinary(image, "products");
     }
 
-    const updateData = {
-      productName,
-      categories,
-      image: publicPath,
-      description,
-      price,
-      productStatus,
-    };
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        productName,
+        description,
+        price,
+        productStatus,
+        categoryId,
+        xPosition,
+        yPosition,
+        width,
+        height,
+        auctionType,
+        image: imageUrl,
+      },
+      { new: true }
+    );
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
     return NextResponse.json(updatedProduct);
   } catch (error) {
     console.error("Error updating Product:", error);
@@ -107,18 +150,18 @@ export async function PUT(request) {
   }
 }
 
+// ✅ Delete a pixel product
 export async function DELETE(request) {
   await connectDB();
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
-  if (!id) {
-    return NextResponse.json({ error: "Missing ID parameter" }, { status: 400 });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return NextResponse.json({ error: "Invalid Product ID" }, { status: 400 });
   }
 
   const product = await Product.findByIdAndDelete(id);
-
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
