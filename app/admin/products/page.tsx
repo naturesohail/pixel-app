@@ -113,7 +113,7 @@ export default function Properties() {
                         <DropdownMenu buttonContent={<span>•••</span>}>
                           <button
                             onClick={() => {
-                              router.push(`/admin/products/edit?id=${decodeURIComponent(product._id)}`);
+                              router.push(`/admin/products/edit/${decodeURIComponent(product._id)}`);
                             }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                             ✏️ Edit
                           </button>

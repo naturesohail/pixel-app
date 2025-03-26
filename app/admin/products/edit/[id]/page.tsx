@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/app/utills/Button';
 import AdminLayout from '@/app/layouts/AdminLayout';
+import { useParams } from 'next/navigation';
 
 interface Category {
   _id: string;
@@ -29,8 +30,7 @@ export default function EditProduct() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const productId = searchParams.get('id');
+  const { id: productId } = useParams(); // ✅ Extract ID from URL
 
   useEffect(() => {
     async function fetchCategories() {
@@ -60,6 +60,7 @@ export default function EditProduct() {
     fetchCategories();
     fetchProduct();
   }, [productId]);
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,7 +102,7 @@ export default function EditProduct() {
           <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-medium text-gray-700">Product Name</label>
-              <input type="text" name="productName" value={product?.productName} required className="mt-1 w-full rounded-lg border px-4 py-2 shadow-sm"/>
+              <input type="text" name="productName" defaultValue={product?.productName} required className="mt-1 w-full rounded-lg border px-4 py-2 shadow-sm"/>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Category</label>
