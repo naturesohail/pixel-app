@@ -12,7 +12,6 @@ cloudinary.config({
   api_secret: "o8IkkQeCn8vFEmG2gI6saI1R6mo",
 });
 
-// Upload image to Cloudinary
 const uploadToCloudinary = async (file, folder) => {
   if (!file) return "";
 
@@ -27,7 +26,6 @@ const uploadToCloudinary = async (file, folder) => {
         resolve(result.secure_url);
       }
     );
-
     streamifier.createReadStream(buffer).pipe(stream);
   });
 };
@@ -53,17 +51,15 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const productName = formData.get("productName");
-    const description = formData.get("description");
+    const totalPixel = formData.get("totalPixel");
+    const biddingEndTime = formData.get("biddingEndTime");
+
     const price = parseFloat(formData.get("price"));
     const productStatus = formData.get("productStatus");
     const categoryId = formData.get("categoryId");
-    const xPosition = parseInt(formData.get("xPosition"));
-    const yPosition = parseInt(formData.get("yPosition"));
-    const width = parseInt(formData.get("width")) || 1;
-    const height = parseInt(formData.get("height")) || 1;
     const auctionType = formData.get("auctionType");
 
-    let imageUrl = "";
+    let imageUrl = existingProduct.image;
     const image = formData.get("image");
     if (image) {
       imageUrl = await uploadToCloudinary(image, "products");
@@ -71,17 +67,14 @@ export async function POST(request) {
 
     const newProduct = await Product.create({
       productName,
-      description,
       price,
       productStatus,
       categoryId,
-      xPosition,
-      yPosition,
-      width,
-      height,
       auctionType,
       currentBid: auctionType === "auction" ? 0 : null,
       image: imageUrl,
+      totalPixel,
+      biddingEndTime
     });
 
     return NextResponse.json(newProduct, { status: 201 });
@@ -90,8 +83,6 @@ export async function POST(request) {
     return NextResponse.json({ error: "Failed to add Product" }, { status: 500 });
   }
 }
-
-// ✅ Update an existing pixel product
 export async function PUT(request) {
   await connectDB();
   try {
@@ -104,14 +95,11 @@ export async function PUT(request) {
 
     const formData = await request.formData();
     const productName = formData.get("productName");
-    const description = formData.get("description");
+    const totalPixel = formData.get("totalPixel");
+    const biddingEndTime = formData.get("biddingEndTime");
     const price = parseFloat(formData.get("price"));
     const productStatus = formData.get("productStatus");
     const categoryId = formData.get("categoryId");
-    const xPosition = parseInt(formData.get("xPosition"));
-    const yPosition = parseInt(formData.get("yPosition"));
-    const width = parseInt(formData.get("width")) || 1;
-    const height = parseInt(formData.get("height")) || 1;
     const auctionType = formData.get("auctionType");
 
     const existingProduct = await Product.findById(id);
@@ -120,8 +108,10 @@ export async function PUT(request) {
     }
 
     let imageUrl = existingProduct.image;
-    const image = formData.get("image");
-    if (image) {
+    const image = await formData.get("image"); // Awaiting formData properly
+
+    // Update image only if a new one is provided
+    if (image && typeof image === "object" && image.size > 0) {
       imageUrl = await uploadToCloudinary(image, "products");
     }
 
@@ -129,16 +119,13 @@ export async function PUT(request) {
       id,
       {
         productName,
-        description,
         price,
         productStatus,
         categoryId,
-        xPosition,
-        yPosition,
-        width,
-        height,
         auctionType,
-        image: imageUrl,
+        image: imageUrl, // Keeps old image if no new image is uploaded
+        totalPixel,
+        biddingEndTime,
       },
       { new: true }
     );

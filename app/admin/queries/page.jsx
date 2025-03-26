@@ -6,19 +6,16 @@ import { Dialog, Transition } from '@headlessui/react';
 const queries = [
   {
     id: 1,
-    property: 'Property 1',
-    name: 'John Doe',
+  name: 'John Doe',
     status: 'Active',
   },
   {
     id: 2,
-    property: 'Property 2',
     name: 'Jane Smith',
     status: 'Inactive',
   },
   {
     id: 3,
-    property: 'Property 3',
     name: 'John Doe',
     status: 'Active',
   },
@@ -55,7 +52,6 @@ export default function Queries() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -65,7 +61,6 @@ export default function Queries() {
               {queries.map((query, index) => (
                 <tr key={query.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">{index + 1}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{query.property}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{query.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{query.status}</td>
                   <td className="px-6 py-4 whitespace-nowrap">

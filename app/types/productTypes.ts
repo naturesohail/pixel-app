@@ -6,7 +6,8 @@ export interface Product {
   description: string;
   productStatus: string;
   image: any;
-  categoryId?:any
+  categoryId?:any;
+  status?:any
 
 }
 
