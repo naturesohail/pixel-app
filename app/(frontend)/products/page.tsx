@@ -1,14 +1,65 @@
-import Header from "@/app/components/Header"
-import Footer from "@/app/components/Footer"
+"use client";
+import { useEffect, useState } from "react";
+import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
+import FrontendLayout from "@/app/layouts/FrontendLayout";
+import Image from "next/image";
+import { Product } from "@/app/types/productTypes";
+const calculateTimeLeft = (endTime: string) => {
+    const difference = new Date(endTime).getTime() - new Date().getTime();
+    if (difference <= 0) return "Bidding End";
+
+    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((difference / (1000 * 60)) % 60);
+    const seconds = Math.floor((difference / 1000) % 60);
+
+    return `${hours}h ${minutes}m ${seconds}s left`;
+};
 
 export default function Page() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({});
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch("/api/products");
+                const data: Product[] = await response.json();
+                setProducts(data);
+
+                // Initialize countdown times
+                const initialTimeLeft: { [key: string]: string } = {};
+                data.forEach(product => {
+                    if (product.auctionType === "bidding" && product.biddingEndTime) {
+                        initialTimeLeft[product._id] = calculateTimeLeft(product.biddingEndTime);
+                    }
+                });
+                setTimeLeft(initialTimeLeft);
+            } catch (error) {
+                console.error("Error fetching products:", error);
+            }
+        };
+
+        fetchProducts();
+
+        const timer = setInterval(() => {
+            setTimeLeft(prevTimeLeft => {
+                const updatedTimeLeft: { [key: string]: string } = {};
+                products.forEach(product => {
+                    if (product.auctionType === "bidding" && product.biddingEndTime) {
+                        updatedTimeLeft[product._id] = calculateTimeLeft(product.biddingEndTime);
+                    }
+                });
+                return updatedTimeLeft;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, []);
+
     return (
-
-        <>
-
+        <FrontendLayout>
             <Header />
-           
-
             <section className="section mt-5" id="products">
                 <div className="container">
                     <div className="row">
@@ -22,175 +73,41 @@ export default function Page() {
                 </div>
                 <div className="container">
                     <div className="row">
-                        <div className="col-lg-4">
-                            <div className="item">
-                                <div className="thumb">
-                                    <div className="hover-content">
-                                        <ul>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-eye" />
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-star" />
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-shopping-cart" />
-                                                </a>
-                                            </li>
-                                        </ul>
+                        {products.map((product) => (
+                            <div className="col-lg-4" key={product._id}>
+                                <div className="item">
+                                    <div className="thumb">
+                                        <div className="hover-content">
+                                            <ul>
+                                                <li>
+                                                    <a href={`/products/${product._id}`}>
+                                                        <i className="fa fa-eye" />
+                                                    </a>
+                                                </li>
+                                               
+                                            </ul>
+                                        </div>
+                                        <Image src={product.image} alt={product.productName} width={200} height={200} style={{maxHeight:"200px"}} />
                                     </div>
-                                    <img src="assets/images/men-01.jpg" alt="" />
-                                </div>
-                                <div className="down-content">
-                                    <h4>Classic Spring</h4>
-                                    <span>$120.00</span>
-                                    <ul className="stars">
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-lg-4">
-                            <div className="item">
-                                <div className="thumb">
-                                    <div className="hover-content">
-                                        <ul>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-eye" />
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-star" />
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-shopping-cart" />
-                                                </a>
-                                            </li>
-                                        </ul>
+                                    <div className="down-content">
+                                        <h4>{product.productName}</h4>
+                                        <span>${product.price}
+
+                                        {product?.auctionType === "bidding" && product?.biddingEndTime && (
+                                            <span>
+                                             {timeLeft[product._id] || "Calculating..."}
+                                            </span>
+                                        )}
+                                        </span>
+                                       
                                     </div>
-                                    <img src="assets/images/men-02.jpg" alt="" />
-                                </div>
-                                <div className="down-content">
-                                    <h4>Air Force 1 X</h4>
-                                    <span>$90.00</span>
-                                    <ul className="stars">
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                    </ul>
                                 </div>
                             </div>
-                        </div>
-                        <div className="col-lg-4">
-                            <div className="item">
-                                <div className="thumb">
-                                    <div className="hover-content">
-                                        <ul>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-eye" />
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-star" />
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="single-product.html">
-                                                    <i className="fa fa-shopping-cart" />
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <img src="assets/images/men-03.jpg" alt="" />
-                                </div>
-                                <div className="down-content">
-                                    <h4>Love Nana ‘20</h4>
-                                    <span>$150.00</span>
-                                    <ul className="stars">
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                        <li>
-                                            <i className="fa fa-star" />
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                       
-                        <div className="col-lg-12">
-                            <div className="pagination">
-                                <ul>
-                                    <li>
-                                        <a href="#">1</a>
-                                    </li>
-                                    <li className="active">
-                                        <a href="#">2</a>
-                                    </li>
-                                    <li>
-                                        <a href="#">3</a>
-                                    </li>
-                                    <li>
-                                        <a href="#">4</a>
-                                    </li>
-                                    <li>
-                                        <a href="#">&gt;</a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </section>
             <Footer />
-
-        </>
-
-    )
+        </FrontendLayout>
+    );
 }

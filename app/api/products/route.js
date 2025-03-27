@@ -35,13 +35,43 @@ async function connectDB() {
   if (mongoose.connection.readyState === 1) return;
   await mongoose.connect(MONGO_URI);
 }
-
-// ✅ Fetch all products
 export async function GET() {
   await connectDB();
-  const products = await Product.find();
-  return NextResponse.json(products);
+  
+  try {
+    const products = await Product.aggregate([
+      {
+        $lookup: {
+          from: 'categories', // Ensure this matches your MongoDB collection name
+          localField: 'categoryId',
+          foreignField: '_id',
+          as: 'category',
+        },
+      },
+      { $unwind: '$category' }, // Flatten category array (if always present)
+      {
+        $project: {
+          _id: 1,
+          productName: 1,
+          price: 1,
+          productStatus: 1,
+          auctionType: 1,
+          biddingEndTime: 1,
+          totalPixel: 1,
+          image: 1,
+          categoryId: 1,
+          categoryName: '$category.category', 
+        },
+      },
+    ]);
+
+    return NextResponse.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+  }
 }
+
 
 
 // ✅ Create a new pixel product

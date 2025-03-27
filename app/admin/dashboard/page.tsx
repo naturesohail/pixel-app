@@ -1,7 +1,24 @@
 'use client';
 import AdminLayout from '@/app/layouts/AdminLayout';
-import { HomeIcon, BuildingOfficeIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { 
+  HomeIcon, 
+  BuildingOfficeIcon, 
+  UserGroupIcon 
+       } from '@heroicons/react/24/outline';
+import { 
+
+     BarChart,
+     Bar,
+     XAxis,
+     YAxis, 
+     CartesianGrid, 
+     Tooltip, 
+     Legend, 
+     ResponsiveContainer, 
+     LineChart,
+     Line
+
+     } from 'recharts';
 
 const propertyData = [
   { month: 'Jan', sales: 65, rentals: 45 },
@@ -13,16 +30,16 @@ const propertyData = [
 ];
 
 const propertyTypeData = [
-  { type: 'Apartment', count: 45 },
-  { type: 'Villa', count: 30 },
-  { type: 'House', count: 25 },
-  { type: 'Commercial', count: 15 },
+  { type: 'Music', count: 45 },
+  { type: 'AI', count: 30 },
+  { type: 'Dance', count: 25 },
+  { type: 'Finance', count: 15 },
 ];
 
 export default function Dashboard() {
   const stats = [
-    { name: 'Total Properties', value: '156', icon: BuildingOfficeIcon },
-    { name: 'Active Listings', value: '89', icon: HomeIcon },
+    { name: 'Total Products', value: '156', icon: BuildingOfficeIcon },
+    { name: 'Categories', value: '89', icon: HomeIcon },
     { name: 'Total Clients', value: '2,345', icon: UserGroupIcon },
   ];
 
@@ -48,7 +65,7 @@ export default function Dashboard() {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Property Transactions</h2>
+          <h2 className="text-xl font-semibold mb-4">Product Trnasactions</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={propertyData}>
@@ -57,15 +74,15 @@ export default function Dashboard() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="sales" stroke="#2563eb" name="Sales" />
-                <Line type="monotone" dataKey="rentals" stroke="#16a34a" name="Rentals" />
+                <Line type="monotone" dataKey="sales" stroke="#2563eb" name="OneTimePruchase" />
+                <Line type="monotone" dataKey="rentals" stroke="#16a34a" name="Bidders" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Property Types Distribution</h2>
+          <h2 className="text-xl font-semibold mb-4"></h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={propertyTypeData}>
@@ -74,7 +91,7 @@ export default function Dashboard() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#2563eb" name="Properties" />
+                <Bar dataKey="count" fill="#2563eb" name="Products" />
               </BarChart>
             </ResponsiveContainer>
           </div>

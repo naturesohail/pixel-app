@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "@/public/assets/css/bootstrap.min.css";
+import "@/public/assets/css/font-awesome.css";
+import "@/public/assets/css/templatemo-hexashop.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,17 +23,6 @@ export default function FrontendLayout({
   children,
 }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="/assets/css/font-awesome.css" />
-        <link rel="stylesheet" href="/assets/css/templatemo-hexashop.css" />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>   
-        {children}
-      </body>
-    </html>
+    <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</div>
   );
 }

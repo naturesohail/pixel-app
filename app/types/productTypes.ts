@@ -7,7 +7,11 @@ export interface Product {
   productStatus: string;
   image: any;
   categoryId?:any;
-  status?:any
+  status?:any;
+  categoryName?:any;
+  auctionType:any;
+  biddingEndTime:any;
+  totalPixel:string
 
 }
 
