@@ -9,7 +9,7 @@ export default function Page() {
                         <nav className="main-nav">
                             <Link href="/" className="logo">
                             <span style={{color:"black"}}> 
-                                                                 MDC
+                                      MDC
                                 </span>
                             </Link>
                             <ul className="nav">
@@ -20,14 +20,14 @@ export default function Page() {
                                 </li>
 
                                 <li>
-                                    <Link href="about">About Us</Link>
+                                    <Link href="/about">About Us</Link>
                                 </li>
                                 <li>
-                                    <Link href="products">Products</Link>
+                                    <Link href="/products">Products</Link>
                                 </li>
                                 
                                 <li>
-                                    <Link href="contact">Contact Us</Link>
+                                    <Link href="/contact">Contact Us</Link>
                                 </li>
 
                                 
