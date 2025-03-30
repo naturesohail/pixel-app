@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe("sk_test_51R7u7XFWt2YrxyZwTMNvSl4gAgizA6e01XBp4sQGhLFId0qKAH1QdI2jFhlaFtHU9sMuPNHh8XvhB7DDQlfCnYiw00GsRA8POr", {
   apiVersion: "2025-02-24.acacia",
 });
 
@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }:  any ) {
   try {
     const { session_id } =  await params;
 
-    
+
     if (!session_id) {
       return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
     }
