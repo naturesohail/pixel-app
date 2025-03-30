@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function page(){
 
     return (
@@ -123,16 +125,18 @@ export default function page(){
                         <h4>Useful Links</h4>
                         <ul>
                             <li>
-                                <a href="#">Homepage</a>
+                            <Link href="/" className="active">Home</Link>                            
+                            </li>
+
+                            <li>
+                            <Link href="/about">About Us</Link>
+                            </li>
+
+                            <li>
+                            <Link href="/products">Auctions</Link>
                             </li>
                             <li>
-                                <a href="#">About Us</a>
-                            </li>
-                            <li>
-                                <a href="#">Help</a>
-                            </li>
-                            <li>
-                                <a href="#">Contact Us</a>
+                            <Link href="/contact">Contact Us</Link>
                             </li>
                         </ul>
                     </div>

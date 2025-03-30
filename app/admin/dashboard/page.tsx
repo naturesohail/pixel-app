@@ -5,8 +5,9 @@ import {
   BuildingOfficeIcon, 
   UserGroupIcon 
        } from '@heroicons/react/24/outline';
-import { 
 
+import {
+  
      BarChart,
      Bar,
      XAxis,
@@ -17,7 +18,6 @@ import {
      ResponsiveContainer, 
      LineChart,
      Line
-
      } from 'recharts';
 
 const propertyData = [

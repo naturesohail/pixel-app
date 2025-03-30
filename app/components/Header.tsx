@@ -13,17 +13,9 @@ export default function Page() {
                                 </span>
                             </Link>
                             <ul className="nav">
-                                <li className="scroll-to-section">
-                                    <Link href="/" className="active">
-                                        Home
-                                    </Link>
-                                </li>
-
+                                
                                 <li>
-                                    <Link href="/about">About Us</Link>
-                                </li>
-                                <li>
-                                    <Link href="/products">Products</Link>
+                                    <Link href="/products">Auctions</Link>
                                 </li>
                                 
                                 <li>

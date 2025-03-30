@@ -27,7 +27,6 @@ export default function Page() {
                 const data: Product[] = await response.json();
                 setProducts(data);
 
-                // Initialize countdown times
                 const initialTimeLeft: { [key: string]: string } = {};
                 data.forEach(product => {
                     if (product.auctionType === "bidding" && product.biddingEndTime) {
@@ -74,7 +73,7 @@ export default function Page() {
                 <div className="container">
                     <div className="row">
                         {products.map((product) => (
-                            <div className="col-lg-4" key={product._id}>
+                            <div className="col-lg-3" key={product._id}>
                                 <div className="item">
                                     <div className="thumb">
                                         <div className="hover-content">
@@ -87,7 +86,7 @@ export default function Page() {
                                                
                                             </ul>
                                         </div>
-                                        <Image src={product.image} alt={product.productName} width={200} height={200} style={{maxHeight:"200px"}} />
+                                        <Image src={product.image} alt={product.productName} width={200} height={100} style={{maxHeight:"150px"}} />
                                     </div>
                                     <div className="down-content">
                                         <h4>{product.productName}</h4>
