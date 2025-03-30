@@ -9,6 +9,7 @@ export async function GET(req: Request, { params }:  any ) {
   try {
     const { session_id } =  await params;
 
+    
     if (!session_id) {
       return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
     }
