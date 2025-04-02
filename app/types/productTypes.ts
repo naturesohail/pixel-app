@@ -11,7 +11,7 @@ export interface Product {
   categoryName?:any;
   auctionType:any;
   biddingEndTime:any;
-  totalPixel:string
+  totalPixel:any
 
 }
 

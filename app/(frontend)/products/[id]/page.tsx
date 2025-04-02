@@ -16,7 +16,7 @@ export default function ProductPage() {
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [boxSize, setBoxSize] = useState(10);
+    const [boxSize, setBoxSize] = useState(10);   
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
