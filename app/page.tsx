@@ -10,7 +10,7 @@ export default function HomePage() {
   const [auctionItems, setAuctionItems] = useState<Product[]>([]);
   const [timeLeftMap, setTimeLeftMap] = useState<{ [key: string]: number }>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const pixelsPerPage = 400;
+  const pixelsPerPage = 2000;
   const [boxSize, setBoxSize] = useState(10);
   const [pixelPageMap, setPixelPageMap] = useState<{ [key: string]: number }>({});
 
@@ -119,39 +119,40 @@ export default function HomePage() {
                               </div>
                             </div>
                           </div>
-                          <Image src={item.image} alt={item.productName} width={260} height={200} className="image-container" />  
+                          <Image src={item.image} alt={item.productName} width={260} height={200} className="image-container" />
                         </div>
 
                         <p className="d-flex flex-wrap gap-2 mt-3">
 
-                            <span className="d-flex">Available pixel</span>
-                                     {item.totalPixel > 0 && (
-                      <div className="pagination-controls mt-2">
-                        {Array.from({ length: pixelsPerPage }).map((_, index) => (
-                          index + (pixelPageMap[item._id] || 0) * pixelsPerPage < item.totalPixel ? (
-                            <span key={index} className="d-inline-block border border-dark bg-light" style={{ width: `${boxSize}px`, height: `${boxSize}px` }}></span>
-                          ) : ""
-                        ))}
-                        <div className="d-flex gap-2 mt-2">
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => setPixelPageMap((prev) => ({ ...prev, [item._id]: Math.max(0, (prev[item._id] || 0) - 1) }))}
-                            disabled={(pixelPageMap[item._id] || 0) === 0}
-                          >
-                            Prev
-                          </button>
-                          <span>{(pixelPageMap[item._id] || 0) + 1}/{Math.ceil(item.totalPixel / pixelsPerPage)}</span>
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => setPixelPageMap((prev) => ({ ...prev, [item._id]: (prev[item._id] || 0) + 1 }))}
-                            disabled={(pixelPageMap[item._id] || 0) * pixelsPerPage + pixelsPerPage >= item.totalPixel}
-                          >
-                            Next
-                          </button>
-                        </div>
+                          <span className="d-flex">Available pixel</span>
+                          {item.totalPixel > 0 && (
+                
+                            <div style={{ width: "600px", height: "200px", display: "grid", gridTemplateColumns: `repeat(${Math.floor(600 / boxSize)}, ${boxSize}px)`, gridTemplateRows: `repeat(${Math.floor(450 / boxSize)}, ${boxSize}px)`, gap: "0px", overflow: "hidden" }}>
+                              {Array.from({ length: pixelsPerPage }).map((_, index) => (
+                                index + (pixelPageMap[item._id] || 0) * pixelsPerPage < item.totalPixel ? (
+                                  <div key={index} style={{ width: `${boxSize}px`, height: `${boxSize}px`, backgroundColor: "#fff", border: "0.5px solid #999" }}></div>
+                                ) : null
+                              ))}
+                            </div>
+                          )}
+
+                        </p>
                       </div>
-                    )}
-                          </p>
+                      <div>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => setPixelPageMap((prev) => ({ ...prev, [item._id]: Math.max(0, (prev[item._id] || 0) - 1) }))}
+                          disabled={(pixelPageMap[item._id] || 0) === 0}>
+                          Prev
+                        </button>
+                        <span>{(pixelPageMap[item._id] || 0) + 1}/{Math.ceil(item.totalPixel / pixelsPerPage)}</span>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => setPixelPageMap((prev) => ({ ...prev, [item._id]: (prev[item._id] || 0) + 1 }))}
+                          disabled={(pixelPageMap[item._id] || 0) * pixelsPerPage + pixelsPerPage >= item.totalPixel}
+                        >
+                          Next
+                        </button>
                       </div>
                     </div>
                   ))}

@@ -16,8 +16,10 @@ export default function ProductPage() {
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [boxSize, setBoxSize] = useState(10);   
+    const [boxSize, setBoxSize] = useState(10);
     const [isProcessing, setIsProcessing] = useState(false);
+    const pixelsPerPage = 2000;
+    const [pixelPageMap, setPixelPageMap] = useState<{ [key: string]: number }>({});
 
     useEffect(() => {
         if (!id) return;
@@ -41,11 +43,11 @@ export default function ProductPage() {
     }, [id]);
 
     const increaseSize = () => {
-        if (boxSize < 50) setBoxSize((prev) => prev + 10);
+        if (boxSize < 50) setBoxSize((prev) => prev + 5);
     };
 
     const decreaseSize = () => {
-        if (boxSize > 10) setBoxSize((prev) => prev - 10);
+        if (boxSize > 10) setBoxSize((prev) => prev - 5);
     };
 
     const handleBuyNow = async () => {
@@ -114,16 +116,35 @@ export default function ProductPage() {
                                         <span className="pb-4">Zoom</span>
                                         <button className="btn btn-sm btn-secondary" onClick={increaseSize}>+</button>
                                     </div>
-
+                                    
                                     <p className="d-flex flex-wrap gap-2 mt-3">
-                                        {Array.from({ length: Number(product?.totalPixel) || 0 }).map((_, index) => (
-                                            <span
-                                                key={index}
-                                                className="d-inline-block border border-dark bg-light"
-                                                style={{ width: `${boxSize}px`, height: `${boxSize}px` }}
-                                            ></span>
-                                        ))}
+                                        <div style={{ width: "800px", height: "300px", display: "grid", gridTemplateColumns: `repeat(${Math.floor(720 / boxSize)}, ${boxSize}px)`, gridTemplateRows: `repeat(${Math.floor(630 / boxSize)}, ${boxSize}px)`, gap: "0px", overflow: "hidden" }}>
+                                            {Array.from({ length: pixelsPerPage }).map((_, index) => (
+
+                                                index + (pixelPageMap[product._id] || 0) * pixelsPerPage < product.totalPixel ? (
+                                                    
+                                                    <div key={index} style={{ width: `${boxSize}px`, height: `${boxSize}px`, backgroundColor: "#fff", border: "0.5px solid #999" }}></div>
+                                                    
+                                                ) : null
+                                            ))}
+                                        </div>
                                     </p>
+                                    <div className="d-flex mt-4 gap-2">
+                                        <button
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={() => setPixelPageMap((prev) => ({ ...prev, [product._id]: Math.max(0, (prev[product._id] || 0) - 1) }))}
+                                        disabled={(pixelPageMap[product._id] || 0) === 0}>
+                                        Prev
+                                        </button>
+                                        <span>{(pixelPageMap[product._id] || 0) + 1}/{Math.ceil(product.totalPixel / pixelsPerPage)}</span>
+                                        <button
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={() => setPixelPageMap((prev) => ({ ...prev, [product._id]: (prev[product._id] || 0) + 1 }))}
+                                        disabled={(pixelPageMap[product._id] || 0) * pixelsPerPage + pixelsPerPage >= product.totalPixel}
+                                        >
+                                        Next
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
