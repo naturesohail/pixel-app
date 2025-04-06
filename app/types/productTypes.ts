@@ -2,7 +2,7 @@ export interface Product {
   _id: string;
   productName: string;
   categories: string;
-  price: string;
+  price: any;
   description: string;
   productStatus: string;
   image: any;
@@ -11,7 +11,8 @@ export interface Product {
   categoryName?:any;
   auctionType:any;
   biddingEndTime:any;
-  totalPixel:any
+  totalPixel:any;
+  pixelBid:any
 
 }
 

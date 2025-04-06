@@ -5,11 +5,12 @@ const ProductSchema = new mongoose.Schema({
   description: { type: String },
   price: { type: Number, required: true },
   image: { type: String },
-  totalPixel:{type:String},
+  totalPixel:{type:Number},
   biddingEndTime:{type:String},
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category" },
-  auctionType: { type: String, enum: ["buy-now", "auction"], required: true },
+  auctionType: { type: String },
   currentBid: { type: Number, default: 0 },
+  pixelBid:{type:Number, default:0},
   status: { type: String, enum: ["available", "sold"], default: "available" },
 }, { timestamps: true });
 

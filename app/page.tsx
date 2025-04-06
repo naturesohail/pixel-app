@@ -5,13 +5,14 @@ import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import Image from "next/image";
 import { Product } from "./types/productTypes";
+import { Spinner } from "./utills/Spinner";
 
 export default function HomePage() {
   const [auctionItems, setAuctionItems] = useState<Product[]>([]);
   const [timeLeftMap, setTimeLeftMap] = useState<{ [key: string]: number }>({});
-  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setIsLoading] = useState(true);
   const pixelsPerPage = 2000;
-  const [boxSize, setBoxSize] = useState(10);
+  const [boxSize, setBoxSize] = useState(7);
   const [pixelPageMap, setPixelPageMap] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function HomePage() {
           newTimeLeftMap[item._id] = Math.max(0, Math.floor((endTime - now) / 1000));
         });
         setTimeLeftMap(newTimeLeftMap);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching auction items:", error);
       }
@@ -94,8 +96,19 @@ export default function HomePage() {
           <div className="row">
             <div className="col-lg-12">
               <div className="right-content">
+                {
+                  loading?(
+                    <>
+                    <Spinner/>
+                    </>
+                  ):(
+                    <>
+                    </>
+                  )
+                }
                 <div className="row">
-                  {auctionItems.map((item) => (
+                  
+                {auctionItems.map((item) => (
                     <div key={item._id} className="col-lg-4">
                       <div className="right-first-image">
                         <div className="thumb">
@@ -159,6 +172,7 @@ export default function HomePage() {
                   {auctionItems.length === 0 && (
                     <p className="text-center text-white w-full">No active auctions at the moment.</p>
                   )}
+                   
                 </div>
               </div>
             </div>

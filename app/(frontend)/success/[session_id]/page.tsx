@@ -4,12 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-
-interface OrderDetails {
-  sessionId: string;
-  paymentStatus: string;
-  amount: number;
-}
+import { OrderDetails } from "@/app/types/orderTypes";
 
 export default function SuccessPage() {
   const { session_id } = useParams();

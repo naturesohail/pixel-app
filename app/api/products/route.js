@@ -58,6 +58,7 @@ export async function GET() {
           auctionType: 1,
           biddingEndTime: 1,
           totalPixel: 1,
+          pixelBid:1,
           image: 1,
           categoryId: 1,
           categoryName: '$category.category', 

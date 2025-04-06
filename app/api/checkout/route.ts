@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { NextResponse } from "next/server";
 
 const stripe = new Stripe("sk_test_51R7u7XFWt2YrxyZwTMNvSl4gAgizA6e01XBp4sQGhLFId0qKAH1QdI2jFhlaFtHU9sMuPNHh8XvhB7DDQlfCnYiw00GsRA8POr", {
-    apiVersion: "2025-02-24.acacia", // Use your actual API version
+    apiVersion: "2025-02-24.acacia",
   });
   
 
@@ -16,12 +16,12 @@ export async function POST(req: Request) {
         price_data: {
           currency: "usd",
           product_data: { name: item.name },
-          unit_amount: item.price * 100, // Convert to cents
+          unit_amount: item.price * 100, 
         },
         quantity: item.quantity,
       })),
       mode: "payment",
-      success_url: `${successUrl}/{CHECKOUT_SESSION_ID}`, // Attach session_id
+      success_url: `${successUrl}/{CHECKOUT_SESSION_ID}`, 
 
       cancel_url: cancelUrl,
     });

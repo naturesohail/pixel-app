@@ -14,6 +14,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true, 
       trim: true, 
     },
+    phone:{
+      type:String,
+      unique: true,
+    },
     password: {
       type: String,
       required: true,
@@ -21,7 +25,7 @@ const userSchema = new mongoose.Schema(
     roles: {
       type: String,
       required: true,
-      enum: ["admin"],
+      enum: ["admin","users"],
     },
   },
   {
@@ -29,11 +33,11 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
+// userSchema.pre("save", async function (next) {
+//   if (!this.isModified("password")) return next();
+//   this.password = await bcrypt.hash(this.password, 10);
+//   next();
+// });
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 module.exports = User;

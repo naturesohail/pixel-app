@@ -1,29 +1,25 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AdminLayout from "@/app/layouts/AdminLayout";
 import { Dialog, Transition } from '@headlessui/react';
 
-const queries = [
-  {
-    id: 1,
-  name: 'John Doe',
-    status: 'Active',
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    status: 'Inactive',
-  },
-  {
-    id: 3,
-    name: 'John Doe',
-    status: 'Active',
-  },
-];
-
 export default function Queries() {
+  const [queries, setQueries] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQuery, setSelectedQuery] = useState(null);
+
+  useEffect(() => {
+    const fetchQueries = async () => {
+      try {
+        const res = await fetch("/api/contact");
+        const data = await res.json();
+        setQueries(data.contacts || []);
+      } catch (error) {
+        console.error("Error fetching queries:", error);
+      }
+    };
+    fetchQueries();
+  }, []);
 
   const openModal = (query) => {
     setSelectedQuery(query);
@@ -35,9 +31,19 @@ export default function Queries() {
     setSelectedQuery(null);
   };
 
-  const handleDelete = () => {
-    console.log("Deleted query: ", selectedQuery);
-    closeModal();
+  const handleDelete = async () => {
+    if (!selectedQuery?._id) return;
+
+    try {
+      await fetch(`/api/contact/${selectedQuery._id}`, {
+        method: "DELETE",
+      });
+
+      setQueries((prev) => prev.filter(q => q._id !== selectedQuery._id));
+      closeModal();
+    } catch (err) {
+      console.error("Failed to delete query", err);
+    }
   };
 
   return (
@@ -53,16 +59,18 @@ export default function Queries() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {queries.map((query, index) => (
-                <tr key={query.id} className="hover:bg-gray-50">
+                <tr key={query._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{query.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{query.status}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{query.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{query.message}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => openModal(query)}
@@ -84,7 +92,7 @@ export default function Queries() {
           <div className="bg-black bg-opacity-50 fixed inset-0" aria-hidden="true" />
           <div className="bg-white rounded-lg p-6 shadow-lg z-50 max-w-sm mx-auto">
             <Dialog.Title className="text-lg font-bold">Confirm Deletion</Dialog.Title>
-            <p className="mt-2">Are you sure you want to delete "{selectedQuery?.property}"?</p>
+            <p className="mt-2">Are you sure you want to delete this query?</p>
             <div className="mt-4 flex justify-end space-x-3">
               <button className="px-4 py-2 bg-gray-200 rounded-lg" onClick={closeModal}>Cancel</button>
               <button className="px-4 py-2 bg-red-600 text-white rounded-lg" onClick={handleDelete}>Delete</button>

@@ -30,7 +30,7 @@ export default function Sidebar() {
       ] 
     },
     { name: 'Queries', icon: MagnifyingGlassIcon, path: '/admin/queries' },
-    { name: 'Settings', icon: Cog8ToothIcon, path: '/admin/settings' },
+    { name: 'Bidders', icon: Cog8ToothIcon, path: '/admin/bidders' },
   ];
 
   return (

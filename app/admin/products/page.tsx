@@ -9,6 +9,7 @@ import AdminLayout from '@/app/layouts/AdminLayout';
 import Image from 'next/image';
 
 export default function Products() {
+  
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -70,7 +71,7 @@ export default function Products() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['#', 'Product', 'Price', 'Image', 'Category', 'Status', 'Actions'].map(header => (
+                {['#', 'Product', 'Price', 'Image', 'Category', 'Status','view', 'Actions'].map(header => (
                   <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     {header}
                   </th>
@@ -94,11 +95,24 @@ export default function Products() {
                       <Image src={product?.image} width={80} height={80} className="rounded-lg shadow-md" alt={product.productName} />
                     </td>
                     <td className="px-6 py-4">{product.categoryName ?? '-'}</td>
+
                     <td className="px-6 py-4">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         {product?.productStatus}
                       </span>
                     </td>
+
+                    <td className="px-6 py-4">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      <button
+                          onClick={() => router.push(`/admin/products/details/${decodeURIComponent(product._id)}`)}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                           View 
+                        </button>
+                        
+                      </span>
+                    </td>
+
                     <td className="px-6 py-4 text-right">
                       <DropdownMenu buttonContent={<span>•••</span>}>
                         <button
