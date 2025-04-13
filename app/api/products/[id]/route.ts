@@ -23,7 +23,7 @@ interface ProductResponse {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   try {
     await connectDB();

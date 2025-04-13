@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/db";
 import Bid from "@/app/lib/models/bidModel";
 
-export async function GET(request: Request, { params }: { params: { userId: string } }) {
+export async function GET(request: Request, { params }: { params: any }) {
   await connectDB();
 
   try {
