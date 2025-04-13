@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: any) {
 
     const bids = await Bid.find({ productId })
       .sort({ createdAt: -1 })
-      .populate("userId", "name email phone") // Adjust based on your user schema
+      .populate("userId", "name email phone")
       .populate("productId");
 
     return NextResponse.json(bids);

@@ -5,9 +5,14 @@ import { FaUser, FaSignInAlt } from "react-icons/fa";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function Header() {
-  const { isLoggedIn, user, logout } = useAuth();
+  const { isLoggedIn, user, logout, isLoading } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null); // now div ref is correct
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when auth state changes
+  useEffect(() => {
+    setDropdownOpen(false);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -19,6 +24,10 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  if (isLoading) {
+    return <div className="header-area header-sticky bg-white shadow-sm">Loading...</div>;
+  }
+
   return (
     <header className="header-area header-sticky bg-white shadow-sm">
       <div className="container">
@@ -26,13 +35,18 @@ export default function Header() {
           <div className="col-12">
             <nav className="main-nav flex justify-between items-center py-3 px-4">
               <Link href="/" className="text-2xl font-bold text-black">
-                MDC
+                AI Of World
               </Link>
 
               <ul className="nav flex items-center gap-6">
                 <li>
-                  <Link href="/products" className="hover:text-blue-600">
+                  <Link href="/auctions" className="hover:text-blue-600">
                     Auctions
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/buy-it-now" className="hover:text-blue-600">
+                    Buy it Now
                   </Link>
                 </li>
                 <li>
@@ -63,6 +77,21 @@ export default function Header() {
                         >
                           Profile
                         </Link>
+                        <Link
+                          href="/bids"
+                          className="block px-4 py-2 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          Bids 
+                        </Link>
+                        <Link
+                          href="/transactions"
+                          className="block px-4 py-2 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          Transactions
+                        </Link>
+                        
                         <button
                           onClick={() => {
                             logout();

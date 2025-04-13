@@ -33,17 +33,24 @@ export async function POST(req: Request) {
       { expiresIn: "2d" }
     );
 
-    // ✅ Fix: Set the cookie correctly
     const cookie = serialize("authToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Secure in production
+      secure: process.env.NODE_ENV === "production", 
       sameSite: "strict",
       maxAge: 2 * 24 * 60 * 60, // 2 days
       path: "/",
     });
+    const userData = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      roles: user.roles,
+      isActive: user.isActive
+    };
 
     return new Response(
-      JSON.stringify({ message: "Login successful" }),
+      JSON.stringify({ message: "Login successful" , user:userData}),
       {
         status: 200,
         headers: { "Set-Cookie": cookie },

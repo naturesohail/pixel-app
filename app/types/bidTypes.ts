@@ -12,8 +12,14 @@ export interface Bid {
     productName: string;
     categories:string
   };
+  title:any;
+  category:any;
+  url:any;
+  description:any;
+  images:any;
   totalPixels: number;
   bidAmount: number;
+  pixelCount:any;
   status: string;
   createdAt: string;
 }

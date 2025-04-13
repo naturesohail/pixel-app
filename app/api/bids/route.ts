@@ -1,0 +1,123 @@
+import { NextResponse } from "next/server";
+import dbConnect from "@/app/lib/db";
+import Bid from "@/app/lib/models/bidModel";
+import Product from "@/app/lib/models/productModel"; // Import Product model
+import PixelConfig from "@/app/lib/models/pixelModel"; // Import PixelConfig model
+import { Types } from "mongoose";
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: "dtc1nqk9g",
+  api_key: "988391113487354",
+  api_secret: "o8IkkQeCn8vFEmG2gI6saI1R6mo",
+});
+
+export async function POST(request: Request) {
+  await dbConnect();
+  
+  try {
+    const { 
+      userId, 
+      pixelCount, 
+      bidAmount, 
+      product 
+    } = await request.json();
+    
+    // Validate inputs
+    if (!Types.ObjectId.isValid(userId) || !pixelCount || !product) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // 1. Determine bidIndex based on existing product count
+    const productsCount = await Product.countDocuments();
+    const bidIndex = productsCount; // This will be the next available index
+
+    // 2. Check if this is first bid for this index
+    const existingBidForIndex = await Bid.findOne({ bidIndex });
+    let shouldDeductPixels = !existingBidForIndex;
+
+    // Process images
+    let processedImages = [];
+    if (Array.isArray(product.images)) {
+      for (const image of product.images) {
+        if (image.startsWith('data:image')) {
+          try {
+            const result = await cloudinary.uploader.upload(image, {
+              folder: `pixel-bids/${userId}`,
+            });
+            processedImages.push(result.secure_url);
+          } catch (error) {
+            console.error('Cloudinary upload error:', error);
+            continue;
+          }
+        } else if (image.startsWith('http')) {
+          processedImages.push(image);
+        }
+      }
+    }
+
+    if (processedImages.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one valid image is required' },
+        { status: 400 }
+      );
+    }
+
+    // Only deduct pixels if this is first bid for this index
+    if (shouldDeductPixels) {
+      const config = await PixelConfig.findOne().sort({ createdAt: -1 });
+      if (!config) {
+        return NextResponse.json(
+          { error: 'Pixel configuration not found' },
+          { status: 404 }
+        );
+      }
+
+      if (config.availablePixels < pixelCount) {
+        return NextResponse.json(
+          { error: 'Not enough pixels available' },
+          { status: 400 }
+        );
+      }
+
+      await PixelConfig.findByIdAndUpdate(
+        config._id,
+        { $inc: { availablePixels: -pixelCount } }
+      );
+    }
+
+    // Create the bid with bidIndex
+    const bid = new Bid({
+      title: product.title,
+      description: product.description,
+      images: processedImages,
+      url: product.url,
+      category: product.category || 'other',
+      userId: new Types.ObjectId(userId),
+      pixelCount,
+      bidAmount,
+      bidIndex, // Store which index this bid is for
+      status: 'pending'
+    });
+
+    await bid.save();
+
+    return NextResponse.json({
+      success: true,
+      bid,
+      message: shouldDeductPixels 
+        ? `Pixels deducted for new bid index ${bidIndex}`
+        : `Bid placed for existing index ${bidIndex} (no pixels deducted)`
+    });
+
+  } catch (error) {
+    console.error('Bid placement error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to place bid' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,20 +1,70 @@
-import mongoose from 'mongoose';
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-
-const BidSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-  totalPixels: { type: Number, required: true },
-  bidAmount: { type: Number, required: true },
-  status: {
-    type: String,
-    default: 'active'
+const bidSchema = new Schema({
+  title: { 
+    type: String, 
+    required: true 
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  description: { 
+    type: String, 
+    required: true 
+  },
+  images: { 
+    type: [String], 
+    required: true, 
+    default: [] 
+  },
+  url: { 
+    type: String 
+  },
+  category: { 
+    type: String, 
+    default: 'other' 
+  },
+  userId: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  pixelCount: { 
+    type: Number, 
+    required: true 
+  },
+  bidAmount: { 
+    type: Number, 
+    required: true 
+  },
+  bidIndex: {  // New field to track which product index this bid is for
+    type: Number,
+    required: true
+  },
+  isOneTimePurchase: { 
+    type: Boolean, 
+    default: false 
+  },
+  status: { 
+    type: String, 
+    enum: ['pending', 'approved', 'rejected', 'paid', 'expired'], 
+    default: 'pending' 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+  approvedAt: { 
+    type: Date 
+  },
+  paidAt: { 
+    type: Date 
+  },
+  paymentIntentId: { 
+    type: String 
+  },
+  stripeSessionId: { 
+    type: String 
   }
-});
-   
-const Bid = mongoose.models.Bid || mongoose.model('Bid', BidSchema,"bids");
-export default Bid;
+}, { timestamps: true });
+
+const Bid = mongoose.models.Bid || mongoose.model("Bid", bidSchema);
+module.exports = Bid;
