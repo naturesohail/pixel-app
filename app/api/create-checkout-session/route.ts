@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import PixelConfig from '@/app/lib/models/pixelModel';
 import Product from '@/app/lib/models/productModel';
 import dbConnect from '@/app/lib/db';
-import { Types, Document } from 'mongoose';
+import { Types } from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 
 cloudinary.config({
@@ -12,16 +12,16 @@ cloudinary.config({
   api_secret: "o8IkkQeCn8vFEmG2gI6saI1R6mo",
 });
 
-const stripe = new Stripe("sk_test_51R7u7XFWt2YrxyZwTMNvSl4gAgizA6e01XBp4sQGhLFId0qKAH1QdI2jFhlaFtHU9sMuPNHh8XvhB7DDQlfCnYiw00GsRA8POr", {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-02-24.acacia",
 });
 
 export async function POST(request: Request) {
   await dbConnect();
-  
+
   try {
     const { userId, pixelCount, totalPrice, productData, isOneTimePurchase } = await request.json();
-    
+
     if (!Types.ObjectId.isValid(userId) || !pixelCount || !productData) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -34,13 +34,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Pixel configuration not found' },
         { status: 404 }
-      );
-    }
-
-    if (config.availablePixels < pixelCount) {
-      return NextResponse.json(
-        { error: 'Not enough pixels available' },
-        { status: 400 }
       );
     }
 
@@ -70,14 +63,44 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calculate expiry date
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + (isOneTimePurchase ? 365 : 30));
 
-    // Get the next available pixel index with proper typing
-    const lastProduct = await Product.findOne().sort({ pixelIndex: -1 }).lean<Document & { pixelIndex: number }>();
-    const nextPixelIndex = (lastProduct?.pixelIndex ?? -1) + 1;
+    let allocatedPixelIndices: number[] = [];
 
+    if (config.auctionZones) {
+      const availableAuctionPixels = config.auctionZones.reduce((acc: number[], zone: any) => {
+        if (zone.pixelIndices) {
+          acc.push(...zone.pixelIndices);
+        }
+        return acc;
+      }, []);
+
+      const allUsedIndices = new Set<number>();
+      const existingProducts = await Product.find({});
+      existingProducts.forEach(p => {
+        p.pixelIndices?.forEach((index: any) => allUsedIndices.add(index));
+      });
+
+      const allocatableFromAuction = availableAuctionPixels.filter((index:any) => !allUsedIndices.has(index));
+
+      allocatedPixelIndices = allocatableFromAuction.slice(0, pixelCount);
+
+      if (allocatedPixelIndices.length < pixelCount) {
+        return NextResponse.json(
+          { error: `Not enough available pixels in auction zones (${allocatedPixelIndices.length}/${pixelCount})` },
+          { status: 400 }
+        );
+      }
+    } else if (pixelCount > 0) {
+      return NextResponse.json(
+        { error: 'No auction zones configured to allocate pixels from.' },
+        { status: 400 }
+      );
+    }
+
+
+    // Create the product
     const product = new Product({
       title: productData.title,
       description: productData.description,
@@ -87,17 +110,29 @@ export async function POST(request: Request) {
       url: productData.url || '',
       owner: new Types.ObjectId(userId),
       pixelCount,
+      pixelIndices: allocatedPixelIndices,
       status: "won",
       purchaseType: isOneTimePurchase ? 'one-time' : 'bid',
-      pixelIndex: nextPixelIndex,
+      pixelIndex: allocatedPixelIndices[0] || null, // For backward compatibility
       expiryDate
     });
 
     await product.save();
 
-    config.availablePixels -= pixelCount;
+    // Update available pixels count (we are allocating from zones, so no direct decrement here)
+
+    // Remove allocated pixels from auction zones
+    if (config.auctionZones) {
+      config.auctionZones = config.auctionZones.map((zone: any) => ({
+        ...zone,
+        pixelIndices: zone.pixelIndices?.filter((index: number) => !allocatedPixelIndices.includes(index)),
+        isEmpty: zone.pixelIndices?.filter((index: number) => !allocatedPixelIndices.includes(index)).length === 0,
+      }));
+    }
+
     await config.save();
 
+    // Create Stripe checkout session (same as before)
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{

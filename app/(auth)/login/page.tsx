@@ -5,12 +5,14 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import Link from "next/link";
 import { AtSymbolIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/app/context/AuthContext"; // Add this import
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth(); // Get the login function from AuthContext
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,17 +29,18 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Check if the error is due to inactive account
         if (data.error === "Account is disabled") {
           throw new Error("Your account has been disabled. Please contact support.");
         }
         throw new Error(data.error || "Invalid credentials");
       }
 
-      // Additional check for isActive (in case API doesn't handle it)
       if (!data.user?.isActive) {
         throw new Error("Your account has been disabled. Please contact support.");
       }
+
+      // Update AuthContext state immediately
+      login(data.user);
 
       Swal.fire({
         title: "Login Successful!",
@@ -47,7 +50,6 @@ export default function Login() {
         showConfirmButton: false,
       }).then(() => {
         localStorage.setItem("authToken", data.token);
-        // Store user data including isActive status
         localStorage.setItem("userData", JSON.stringify(data.user));
         router.push("/profile");
       });
@@ -62,6 +64,9 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center p-4">

@@ -8,6 +8,8 @@ type User = {
   name: string;
   role: string;
   phone: string;
+  isAdmin: boolean;
+  isActive: boolean;
 };
 
 type AuthContextType = {
@@ -24,9 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Add login function to update state
   const login = (userData: User) => {
     setUser(userData);
+    localStorage.setItem("userData", JSON.stringify(userData));
   };
 
   const logout = async () => {
@@ -36,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: "include" 
       });
       setUser(null);
+      localStorage.removeItem("userData");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -44,6 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function checkLogin() {
       try {
+        // First check localStorage for quick hydration
+        const localUser = localStorage.getItem("userData");
+        if (localUser) {
+          setUser(JSON.parse(localUser));
+        }
+
+        // Then verify with the server
         const res = await fetch("/api/auth/me", {
           method: "GET",
           credentials: "include",
@@ -52,11 +62,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           setUser(data.user);
+          localStorage.setItem("userData", JSON.stringify(data.user));
         } else {
           setUser(null);
+          localStorage.removeItem("userData");
         }
       } catch (error) {
         setUser(null);
+        localStorage.removeItem("userData");
       } finally {
         setIsLoading(false);
       }

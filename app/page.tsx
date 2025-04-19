@@ -6,6 +6,19 @@ import Footer from "@/app/components/Footer";
 import { Spinner } from "./utills/Spinner";
 import AuctionCard from "./components/AuctionCard";
 
+interface AuctionZone {
+  _id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  productIds: string[];
+  isEmpty: boolean;
+  pixelIndices: number[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface PixelDataResponse {
   success: boolean;
   config?: {
@@ -15,6 +28,7 @@ interface PixelDataResponse {
     totalPixels: number;
     availablePixels: number;
     createdAt: string;
+    auctionZones?: AuctionZone[];
   };
   products?: {
     _id: string;
@@ -30,6 +44,20 @@ export default function HomePage() {
     config: {
       totalPixels: number;
       availablePixels: number;
+      auctionZones?: {
+        _id: string;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        productIds: string[];
+        isEmpty: boolean;
+        pixelIndices: number[];
+        createdAt?: string;
+        updatedAt?: string;
+
+      }[];
+
     };
     products: {
       _id: string;
@@ -47,19 +75,23 @@ export default function HomePage() {
         const response = await fetch("/api/pixels");
         const data: PixelDataResponse = await response.json();
         if (data.success && data.config) {
-          setPixelData({
-            config: {
-              totalPixels: data.config.totalPixels,
-              availablePixels: data.config.availablePixels
-            },
-            products: data.products?.map(p => ({
-              _id: p._id,
-              title: p.title,
-              images: p.images,
-              pixelIndex: p.pixelIndex,
-              pixelCount: p.pixelCount
-            })) || []
-          });
+          // In HomePage.tsx
+          if (data.success && data.config) {
+            setPixelData({
+              config: {
+                totalPixels: data.config.totalPixels,
+                availablePixels: data.config.availablePixels,
+                auctionZones: data.config.auctionZones // Add this line
+              },
+              products: data.products?.map(p => ({
+                _id: p._id,
+                title: p.title,
+                images: p.images,
+                pixelIndex: p.pixelIndex,
+                pixelCount: p.pixelCount
+              })) || []
+            });
+          }
         }
         setIsLoading(false);
       } catch (error) {

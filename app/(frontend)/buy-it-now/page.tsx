@@ -8,8 +8,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Swal from "sweetalert2";
 
-// Type definitions
 interface Product {
   id?: string;
   title: string;
@@ -22,32 +22,26 @@ interface Product {
   pixelIndex?: number;
 }
 
-interface Pixel {
-  ownerId: string | null;
-  listedProduct: Product | null;
-}
-
 interface PixelGrid {
   totalPixels: number;
   availablePixels: number;
-  pricePerPixel: number;
   oneTimePrice: number;
+  config: {
+    minimumOrderQuantity: number;
+  };
 }
 
-export default function PixelMarketplace() {
+export default function BuyItNowPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
 
-  // State management
   const [pixelGrid, setPixelGrid] = useState<PixelGrid | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pixelCount, setPixelCount] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
-  const [actionType, setActionType] = useState<"bid" | "buy">("buy");
 
-  // Product listing form
   const [productForm, setProductForm] = useState<Product>({
     title: "",
     description: "",
@@ -57,26 +51,6 @@ export default function PixelMarketplace() {
     url: ""
   });
 
-  // Default prices
-  const DEFAULT_PRICES = {
-    bidPrice: 1.00,
-    buyPrice: 1.50
-  };
-
-  // Get current prices safely
-  const getCurrentPrices = () => {
-    if (!pixelGrid) return DEFAULT_PRICES;
-    return {
-      bidPrice: pixelGrid.pricePerPixel || DEFAULT_PRICES.bidPrice,
-      buyPrice: pixelGrid.oneTimePrice || DEFAULT_PRICES.buyPrice
-    };
-  };
-
-  const { bidPrice, buyPrice } = getCurrentPrices();
-  const currentPricePerPixel = actionType === "buy" ? buyPrice : bidPrice;
-  const totalPrice = pixelCount * currentPricePerPixel;
-  const maxPixels = pixelGrid?.availablePixels || 1000;
-
   useEffect(() => {
     const fetchPixelGrid = async () => {
       try {
@@ -84,6 +58,7 @@ export default function PixelMarketplace() {
         if (!response.ok) throw new Error("Failed to fetch pixel grid");
         const data = await response.json();
         setPixelGrid(data);
+        setPixelCount(data.config.minimumOrderQuantity || 1);
       } catch (error) {
         setError(error instanceof Error ? error.message : "Error fetching pixel grid");
       } finally {
@@ -95,28 +70,41 @@ export default function PixelMarketplace() {
   }, []);
 
   const incrementCount = () => {
-    if (pixelCount < maxPixels) {
+    if (pixelGrid && pixelCount < pixelGrid.availablePixels) {
       setPixelCount(pixelCount + 1);
     }
   };
 
   const decrementCount = () => {
-    if (pixelCount > 1) {
+    if (pixelGrid && pixelCount > pixelGrid.config.minimumOrderQuantity) {
       setPixelCount(pixelCount - 1);
     }
   };
 
-  const handleActionClick = (type: "bid" | "buy") => {
-    setActionType(type);
+  const handleBuyClick = () => {
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: "Login Required",
+        text: "You need to login to purchase pixels",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#4f46e5",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Login",
+        cancelButtonText: "Cancel"
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/login");
+        }
+      });
+      return;
+    }
     setShowActionModal(true);
   };
 
   const handleBuyNow = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
+    if (!user || !pixelGrid) return;
+    
     setIsProcessing(true);
     try {
       const stripe = await stripePromise;
@@ -126,7 +114,7 @@ export default function PixelMarketplace() {
         body: JSON.stringify({
           userId: user._id,
           pixelCount,
-          totalPrice,
+          totalPrice: pixelCount * pixelGrid.oneTimePrice,
           productData: productForm,
           isOneTimePurchase: true
         })
@@ -136,38 +124,11 @@ export default function PixelMarketplace() {
       await stripe?.redirectToCheckout({ sessionId: session.id });
     } catch (error) {
       console.error("Checkout error:", error);
-      alert(error instanceof Error ? error.message : "Checkout failed");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePlaceBid = async () => {
-    if (!user || !pixelGrid) return;
-
-    setIsProcessing(true);
-    try {
-      const response = await fetch("/api/pixels/bid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id,
-          pixelCount,
-          totalPrice,
-          product: productForm,
-          isOneTimePurchase: false
-        })
+      Swal.fire({
+        title: "Checkout Failed",
+        text: error instanceof Error ? error.message : "Something went wrong",
+        icon: "error"
       });
-
-      if (!response.ok) throw new Error("Bid placement failed");
-
-      const updatedGrid = await response.json();
-      setPixelGrid(updatedGrid);
-      setShowActionModal(false);
-      alert("Bid placed successfully!");
-    } catch (error) {
-      console.error("Bid error:", error);
-      alert(error instanceof Error ? error.message : "Bid placement failed");
     } finally {
       setIsProcessing(false);
     }
@@ -227,40 +188,21 @@ export default function PixelMarketplace() {
 
       <div className="container mt-5 mb-5">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>Pixel Marketplace</h1>
-          <div className="d-flex align-items-center">
-            <span className="me-3">
-              Price per pixel: ${bidPrice.toFixed(2)} (Bid) / ${buyPrice.toFixed(2)} (Buy)
-            </span>
-            {user && (
-              <button
-                className="btn btn-outline-primary"
-                onClick={() => router.push("/dashboard")}
-              >
-                My Pixels
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="card mb-4 mt-5">
-          <div className="card-body">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="card-title mb-0">Purchase Pixels</h5>
-                <small className="text-muted">
-                  {pixelGrid ? `${pixelGrid.totalPixels - pixelGrid.availablePixels} pixels occupied, ${pixelGrid.availablePixels} available` : 'Loading pixel data...'}
-                </small>
-              </div>
-            </div>
-          </div>
+          <h1>Buy Pixels Now</h1>
+          {user && (
+            <button
+              className="btn btn-outline-primary"
+              onClick={() => router.push("/dashboard")}
+            >
+              My Pixels
+            </button>
+          )}
         </div>
 
         <div className="card mb-4">
           <div className="card-body">
             <div className="row">
               <div className="col-md-6">
-                {/* Single Pixel Box */}
                 <div className="pixel-visualization mb-4">
                   <div 
                     className="pixel-box"
@@ -278,14 +220,13 @@ export default function PixelMarketplace() {
                 </div>
               </div>
               <div className="col-md-6">
-                {/* Pixel quantity controls */}
                 <div className="mb-4">
                   <label className="form-label">Number of pixels:</label>
                   <div className="d-flex align-items-center">
                     <button
                       className="btn btn-outline-secondary"
                       onClick={decrementCount}
-                      disabled={pixelCount <= 1}
+                      disabled={pixelCount <= (pixelGrid?.config.minimumOrderQuantity || 1)}
                     >
                       -
                     </button>
@@ -295,58 +236,46 @@ export default function PixelMarketplace() {
                     <button
                       className="btn btn-outline-secondary"
                       onClick={incrementCount}
-                      disabled={pixelCount >= maxPixels}
+                      disabled={!pixelGrid || pixelCount >= pixelGrid.availablePixels}
                     >
                       +
                     </button>
                   </div>
-                  <small className="text-muted">Max {maxPixels} pixels available</small>
+                  <small className="text-muted">
+                    Min: {pixelGrid?.config.minimumOrderQuantity || 1}, Max: {pixelGrid?.availablePixels || 0} available
+                  </small>
                 </div>
 
-                {/* Price summary */}
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
-                    <span>Current Price ({actionType === "buy" ? "One-Time" : "Bid"}):</span>
-                    <strong>${totalPrice.toFixed(2)}</strong>
+                    <span>Price per pixel:</span>
+                    <strong>${pixelGrid?.oneTimePrice?.toFixed(2) || '0.00'}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
-                    <span>Price per pixel:</span>
-                    <strong>${currentPricePerPixel.toFixed(2)}</strong>
+                    <span>Total Price:</span>
+                    <strong>${(pixelCount * (pixelGrid?.oneTimePrice || 0)).toFixed(2)}</strong>
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="d-grid gap-2">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleActionClick("buy")}
-                    disabled={isProcessing}
-                  >
-                    Buy Now (${buyPrice.toFixed(2)}/pixel)
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => handleActionClick("bid")}
-                    disabled={isProcessing}
-                  >
-                    Place Bid (${bidPrice.toFixed(2)}/pixel)
-                  </button>
-                </div>
+                <button
+                  className="btn btn-primary w-100"
+                  onClick={handleBuyClick}
+                  disabled={isProcessing}
+                >
+                  Buy Now
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Modal */}
       {showActionModal && (
         <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">
-                  {actionType === "buy" ? "Buy Pixels" : "Place Bid for Pixels"}
-                </h5>
+                <h5 className="modal-title">Buy Pixels</h5>
                 <button 
                   type="button" 
                   className="btn-close" 
@@ -358,14 +287,10 @@ export default function PixelMarketplace() {
                   <div className="alert alert-info mb-4">
                     <div className="d-flex justify-content-between">
                       <span>Total Price:</span>
-                      <strong>${totalPrice.toFixed(2)}</strong>
+                      <strong>${(pixelCount * (pixelGrid?.oneTimePrice || 0)).toFixed(2)}</strong>
                     </div>
                     <div className="d-flex justify-content-between">
-                      <span>Price per pixel:</span>
-                      <strong>${currentPricePerPixel.toFixed(2)}</strong>
-                    </div>
-                    <div className="d-flex justify-content-between">
-                      <span>Number of pixels:</span>
+                      <span>Pixels:</span>
                       <strong>{pixelCount}</strong>
                     </div>
                   </div>
@@ -451,10 +376,10 @@ export default function PixelMarketplace() {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={actionType === "buy" ? handleBuyNow : handlePlaceBid}
+                  onClick={handleBuyNow}
                   disabled={isProcessing || !productForm.title || !productForm.description}
                 >
-                  {isProcessing ? "Processing..." : actionType === "buy" ? "Confirm Purchase" : "Place Bid"}
+                  {isProcessing ? "Processing..." : "Confirm Purchase"}
                 </button>
               </div>
             </div>

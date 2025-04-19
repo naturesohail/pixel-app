@@ -40,6 +40,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    
     if (!isConnected) {
       await dbConnect();
       isConnected = true;
@@ -47,7 +48,6 @@ export async function POST(request: Request) {
 
     const { pricePerPixel, oneTimePrice, totalPixels, minimumOrderQuantity, auctionWinDays } = await request.json();
 
-    // Calculate available pixels (same as total for new config)
     const availablePixels = totalPixels;
 
     const newConfig = await PixelConfig.create({

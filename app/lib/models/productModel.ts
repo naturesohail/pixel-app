@@ -36,7 +36,8 @@ const ProductSchema: Schema = new Schema({
     enum: ['one-time', 'bid'],
     required: true
   },
-  pixelIndex: { type: Number, required: true },
+  pixelIndices: { type: [Number], required: true }, // Array of pixel indices
+  pixelIndex: { type: Number, required: true }, // First pixel index (backward compatibility)
   expiryDate: { type: Date, required: true }
 }, { timestamps: true });
 

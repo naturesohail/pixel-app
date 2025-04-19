@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   HomeIcon,
-  Squares2X2Icon, // For Dashboard
-  ViewfinderCircleIcon, // For Pixels
-  TagIcon, // For Categories
-  CubeIcon, // For Pixels (alternative)
-  QuestionMarkCircleIcon, // For Queries
-  UserGroupIcon, // For Bidders (alternative to UsersIcon)
-  ScaleIcon, // For Bids (alternative to GavelIcon)
+  Squares2X2Icon,
+  ViewfinderCircleIcon,
+  TagIcon, 
+  CubeIcon,
+  QuestionMarkCircleIcon,
+  UserGroupIcon,
+  ScaleIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
@@ -43,6 +43,7 @@ export default function Sidebar() {
       'fixed left-0 top-0 h-full bg-white shadow-lg transition-all duration-300 z-10',
       isOpen ? 'w-64' : 'w-20'
     )}>
+
       <div className="p-4">
         <h1 className={clsx(
           'font-bold text-gray-800 transition-all duration-300 flex items-center',
@@ -50,6 +51,7 @@ export default function Sidebar() {
         )}>
           {isOpen ? "Admin Panel" : 'AP'}
         </h1>
+        
       </div>
 
       <nav className="mt-8 px-2">

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       email,
       phone,
       password: hashedPassword,
-      roles: "users",
+
     });
 
     return NextResponse.json({ createUser }, { status: 200 });

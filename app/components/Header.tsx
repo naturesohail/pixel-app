@@ -33,8 +33,8 @@ export default function Header() {
       <div className="container">
         <div className="row">
           <div className="col-12">
-            <nav className="main-nav flex justify-between items-center py-3 px-4">
-              <Link href="/" className="text-2xl font-bold text-black">
+            <nav className="main-nav flex justify-between items-center py-1 px-4">
+              <Link href="/" className="text-2xl font-bold text-black mt-3">
                 AI Of World
               </Link>
 
@@ -105,7 +105,7 @@ export default function Header() {
                     )}
                   </li>
                 ) : (
-                  <li>
+                  <li className="mt-4">
                     <Link href="/login" title="Login" className="hover:text-blue-600">
                       <FaSignInAlt size={20} />
                     </Link>

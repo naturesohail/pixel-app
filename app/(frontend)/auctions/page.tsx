@@ -1,3 +1,6 @@
+
+
+
 "use client";
 const stripePromise = loadStripe("pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9");
 import { useEffect, useState } from "react";
@@ -8,6 +11,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Swal from "sweetalert2";
 
 interface Product {
   id?: string;
@@ -23,6 +27,7 @@ interface Product {
   pixelCount?: number;
   purchaseType?: 'one-time' | 'bid';
 }
+
 interface PixelGrid {
   totalPixels: number;
   availablePixels: number;
@@ -32,12 +37,12 @@ interface PixelGrid {
 
 export default function PixelMarketplace() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth(); // Added isLoggedIn from AuthContext
 
-  const [pixelGrid, setPixelGrid] = useState<PixelGrid | null>(null);
+  const [pixelGrid, setPixelGrid] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pixelCount, setPixelCount] = useState(1);
+  const [pixelCount, setPixelCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [actionType, setActionType] = useState<"bid" | "buy">("buy");
@@ -59,8 +64,8 @@ export default function PixelMarketplace() {
   const getCurrentPrices = () => {
     if (!pixelGrid) return DEFAULT_PRICES;
     return {
-      bidPrice: pixelGrid.pricePerPixel || DEFAULT_PRICES.bidPrice,
-      buyPrice: pixelGrid.oneTimePrice || DEFAULT_PRICES.buyPrice
+      bidPrice: pixelGrid?.config?.pricePerPixel || DEFAULT_PRICES.bidPrice,
+      buyPrice: pixelGrid?.config?.oneTimePrice || DEFAULT_PRICES.buyPrice
     };
   };
 
@@ -76,6 +81,7 @@ export default function PixelMarketplace() {
         if (!response.ok) throw new Error("Failed to fetch pixel grid");
         const data = await response.json();
         setPixelGrid(data);
+        setPixelCount(data.config.minimumOrderQuantity)
       } catch (error) {
         setError(error instanceof Error ? error.message : "Error fetching pixel grid");
       } finally {
@@ -86,16 +92,35 @@ export default function PixelMarketplace() {
     fetchPixelGrid();
   }, []);
 
-  
+  const showLoginAlert = () => {
+    Swal.fire({
+      title: "Login Required",
+      text: "You need to login to perform this action",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#4f46e5",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Login Now",
+      cancelButtonText: "Cancel"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        router.push("/login");
+      }
+    });
+  };
 
   const handleActionClick = (type: "bid" | "buy") => {
+    if (!isLoggedIn) {
+      showLoginAlert();
+      return;
+    }
     setActionType(type);
     setShowActionModal(true);
   };
 
   const handleBuyNow = async () => {
     if (!user) {
-      router.push("/login");
+      showLoginAlert();
       return;
     }
 
@@ -115,17 +140,31 @@ export default function PixelMarketplace() {
       });
 
       const session = await response.json();
+      if(session.error){
+        Swal.fire({
+          title: "Checkout Failed",
+          text: session.error instanceof Error ? session.error : "Something went wrong",
+          icon: "error"
+        });
+      }
       await stripe?.redirectToCheckout({ sessionId: session.id });
     } catch (error) {
       console.error("Checkout error:", error);
-      alert(error instanceof Error ? error.message : "Checkout failed");
+      Swal.fire({
+        title: "Checkout Failed",
+        text: error instanceof Error ? error.message : "Something went wrong",
+        icon: "error"
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handlePlaceBid = async () => {
-    if (!user || !pixelGrid) return;
+    if (!user || !pixelGrid) {
+      showLoginAlert();
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -146,10 +185,20 @@ export default function PixelMarketplace() {
       const updatedGrid = await response.json();
       setPixelGrid(updatedGrid);
       setShowActionModal(false);
-      alert("Bid placed successfully!");
+      Swal.fire({
+        title: "Bid Placed!",
+        text: "Your bid has been placed successfully",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error("Bid error:", error);
-      alert(error instanceof Error ? error.message : "Bid placement failed");
+      Swal.fire({
+        title: "Bid Failed",
+        text: error instanceof Error ? error.message : "Something went wrong",
+        icon: "error"
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -259,33 +308,31 @@ export default function PixelMarketplace() {
                 </div>
               </div>
               <div className="col-md-6">
-               
-
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
-                    <span>Current Price ({actionType === "buy" ? "One-Time" : "Bid"}):</span>
-                    <strong>${totalPrice.toFixed(2)}</strong>
+                    <span>One Time Price (Buy Now):</span>
+                    <strong>${pixelGrid?.config?.oneTimePrice.toFixed(2)}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
-                    <span>Price per pixel:</span>
-                    <strong>${currentPricePerPixel.toFixed(2)}</strong>
+                    <span>Price per pixel (Bid):</span>
+                    <strong>${pixelGrid?.config?.pricePerPixel.toFixed(2)}</strong>
                   </div>
                 </div>
 
-                <div className="d-grid gap-5">
+                <div className="d-flex gap-2">
                   <button
                     className="btn btn-primary"
                     onClick={() => handleActionClick("buy")}
                     disabled={isProcessing}
                   >
-                    Buy Now (${buyPrice.toFixed(2)}/pixel)
+                    Buy Now
                   </button>
                   <button
                     className="btn btn-secondary"
                     onClick={() => handleActionClick("bid")}
                     disabled={isProcessing}
                   >
-                    Place Bid (${bidPrice.toFixed(2)}/pixel)
+                    Place Bid
                   </button>
                 </div>
               </div>
@@ -315,11 +362,10 @@ export default function PixelMarketplace() {
                       <span>Total Price:</span>
                       <strong>${totalPrice.toFixed(2)}</strong>
                       <span>Price per pixel:</span>
-                      <strong>${currentPricePerPixel.toFixed(2)}</strong>
+                      <strong>${actionType === "buy" ? pixelGrid?.config?.oneTimePrice : pixelGrid?.config?.pricePerPixel} </strong>
                         <span>Number of pixels:</span>
                       <strong>{pixelCount}</strong>
                     </div>
-                   
                   </div>
 
                   <div className="mb-3">
@@ -391,7 +437,6 @@ export default function PixelMarketplace() {
                       required
                     />
                   </div>
-                 
                 </form>
               </div>
               <div className="modal-footer">

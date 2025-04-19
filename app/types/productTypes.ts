@@ -1,8 +1,8 @@
 export interface Product {
   _id: string;
-  productName: string;
-  categories: string;
-  price: any;
+  productName?: string;
+  categories?: string;
+  price?: any;
   description: string;
   productStatus: string;
   image: any;
@@ -16,7 +16,7 @@ export interface Product {
   soldPixels: number;
   pricePerPixel?: number;
   ownerName?: string;
-  url?: string; // URL to open when pixel is clicked
+  url?: string;
 
 
 }

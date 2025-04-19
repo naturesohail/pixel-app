@@ -7,7 +7,7 @@ import DropdownMenu from '@/app/components/admin/DropdownComponent';
 import AdminLayout from '@/app/layouts/AdminLayout';
 
 interface PixelConfig {
-  id: string;
+  _id: string;
   pricePerPixel: number;
   oneTimePrice: number;
   totalPixels: number;
@@ -58,7 +58,7 @@ export default function Pixels() {
 
       if (!response.ok) throw new Error('Failed to delete configuration');
 
-      setConfigs(prev => prev.filter(config => config.id !== configToDelete));
+      setConfigs(prev => prev.filter(config => config._id !== configToDelete));
       setIsDeleteOpen(false);
       setConfigToDelete(null);
     } catch (error) {
@@ -116,7 +116,7 @@ export default function Pixels() {
                 </tr>
               ) : (
                 configs.map((config, index) => (
-                  <tr key={config.id} className="hover:bg-gray-50">
+                  <tr key={config._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">{index + 1}</td>
                     <td className="px-6 py-4">${config.pricePerPixel.toFixed(2)}</td>
                     <td className="px-6 py-4">${config.oneTimePrice.toFixed(2)}</td>
@@ -133,14 +133,14 @@ export default function Pixels() {
                     <td className="px-6 py-4 text-right">
                       <DropdownMenu buttonContent={<span>•••</span>}>
                         <button
-                          onClick={() => router.push(`/admin/pixels/edit?id=${config.id}`)}
+                          onClick={() => router.push(`/admin/pixels/edit?id=${config._id}`)}
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
                           ✏️ Edit
                         </button>
                         <button
                           onClick={() => {
-                            setConfigToDelete(config.id);
+                            setConfigToDelete(config._id);
                             setIsDeleteOpen(true);
                           }}
                           className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
