@@ -20,14 +20,21 @@ interface Product {
   url?: string;
   ownerId?: string;
   pixelIndex?: number;
+  expiryDate?: string;
+  pixelCount?: number;
+  purchaseType?: 'one-time' | 'bid';
 }
 
 interface PixelGrid {
   totalPixels: number;
   availablePixels: number;
+  pricePerPixel: number;
   oneTimePrice: number;
   config: {
     minimumOrderQuantity: number;
+    availablePixels: number;
+    oneTimePrice: number;
+    pricePerPixel: number;
   };
 }
 
@@ -70,7 +77,7 @@ export default function BuyItNowPage() {
   }, []);
 
   const incrementCount = () => {
-    if (pixelGrid && pixelCount < pixelGrid.availablePixels) {
+    if (pixelGrid && pixelCount < pixelGrid.config.availablePixels) {
       setPixelCount(pixelCount + 1);
     }
   };
@@ -81,30 +88,39 @@ export default function BuyItNowPage() {
     }
   };
 
+  const totalPrice = pixelCount * (pixelGrid?.config.oneTimePrice || 0);
+
+  const showLoginAlert = () => {
+    Swal.fire({
+      title: "Login Required",
+      text: "You need to login to perform this action",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#4f46e5",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Login Now",
+      cancelButtonText: "Cancel"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        router.push("/login");
+      }
+    });
+  };
+
   const handleBuyClick = () => {
     if (!isLoggedIn) {
-      Swal.fire({
-        title: "Login Required",
-        text: "You need to login to purchase pixels",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#4f46e5",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Login",
-        cancelButtonText: "Cancel"
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push("/login");
-        }
-      });
+      showLoginAlert();
       return;
     }
     setShowActionModal(true);
   };
 
   const handleBuyNow = async () => {
-    if (!user || !pixelGrid) return;
-    
+    if (!user || !pixelGrid) {
+      showLoginAlert();
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const stripe = await stripePromise;
@@ -114,13 +130,20 @@ export default function BuyItNowPage() {
         body: JSON.stringify({
           userId: user._id,
           pixelCount,
-          totalPrice: pixelCount * pixelGrid.oneTimePrice,
+          totalPrice,
           productData: productForm,
           isOneTimePurchase: true
         })
       });
 
       const session = await response.json();
+      if(session.error){
+        Swal.fire({
+          title: "Checkout Failed",
+          text: session.error instanceof Error ? session.error : "Something went wrong",
+          icon: "error"
+        });
+      }
       await stripe?.redirectToCheckout({ sessionId: session.id });
     } catch (error) {
       console.error("Checkout error:", error);
@@ -226,8 +249,7 @@ export default function BuyItNowPage() {
                     <button
                       className="btn btn-outline-secondary"
                       onClick={decrementCount}
-                      disabled={pixelCount <= (pixelGrid?.config.minimumOrderQuantity || 1)}
-                    >
+                      disabled={pixelCount <= (pixelGrid?.config.minimumOrderQuantity || 1)}>
                       -
                     </button>
                     <div className="mx-2" style={{ width: "80px", textAlign: "center" }}>
@@ -236,24 +258,23 @@ export default function BuyItNowPage() {
                     <button
                       className="btn btn-outline-secondary"
                       onClick={incrementCount}
-                      disabled={!pixelGrid || pixelCount >= pixelGrid.availablePixels}
-                    >
+                      disabled={!pixelGrid || pixelCount >= pixelGrid.config.availablePixels}>
                       +
                     </button>
                   </div>
                   <small className="text-muted">
-                    Min: {pixelGrid?.config.minimumOrderQuantity || 1}, Max: {pixelGrid?.availablePixels || 0} available
+                    Min: {pixelGrid?.config.minimumOrderQuantity || 1}, Max: {pixelGrid?.config.availablePixels || 0} available
                   </small>
                 </div>
 
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
                     <span>Price per pixel:</span>
-                    <strong>${pixelGrid?.oneTimePrice?.toFixed(2) || '0.00'}</strong>
+                    <strong>${pixelGrid?.config.oneTimePrice?.toFixed(2) || '0.00'}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
                     <span>Total Price:</span>
-                    <strong>${(pixelCount * (pixelGrid?.oneTimePrice || 0)).toFixed(2)}</strong>
+                    <strong>${totalPrice.toFixed(2)}</strong>
                   </div>
                 </div>
 
@@ -284,13 +305,13 @@ export default function BuyItNowPage() {
               </div>
               <div className="modal-body">
                 <form>
-                  <div className="alert alert-info mb-4">
+                  <div className="alert alert-info mb-1">
                     <div className="d-flex justify-content-between">
                       <span>Total Price:</span>
-                      <strong>${(pixelCount * (pixelGrid?.oneTimePrice || 0)).toFixed(2)}</strong>
-                    </div>
-                    <div className="d-flex justify-content-between">
-                      <span>Pixels:</span>
+                      <strong>${totalPrice.toFixed(2)}</strong>
+                      <span>Price per pixel:</span>
+                      <strong>${pixelGrid?.config.oneTimePrice?.toFixed(2) || '0.00'}</strong>
+                      <span>Number of pixels:</span>
                       <strong>{pixelCount}</strong>
                     </div>
                   </div>
@@ -302,25 +323,6 @@ export default function BuyItNowPage() {
                       className="form-control"
                       value={productForm.title}
                       onChange={(e) => setProductForm({...productForm, title: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Product URL</label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      value={productForm.url}
-                      onChange={(e) => setProductForm({...productForm, url: e.target.value})}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Description*</label>
-                    <textarea
-                      className="form-control"
-                      rows={3}
-                      value={productForm.description}
-                      onChange={(e) => setProductForm({...productForm, description: e.target.value})}
                       required
                     />
                   </div>
@@ -362,6 +364,26 @@ export default function BuyItNowPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Product URL</label>
+                    <input
+                      type="url"
+                      className="form-control"
+                      value={productForm.url}
+                      onChange={(e) => setProductForm({...productForm, url: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Description*</label>
+                    <textarea
+                      className="form-control"
+                      rows={3}
+                      value={productForm.description}
+                      onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+                      required
+                    />
                   </div>
                 </form>
               </div>

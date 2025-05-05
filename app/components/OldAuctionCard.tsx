@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { 
+  useEffect, 
+  useRef, 
+  useState, 
+  useCallback 
+} from "react";
+
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -9,26 +15,17 @@ interface Product {
   images: string[];
   pixelIndex: number;
   pixelCount: number;
+  purchaseType?: 'one-time' | 'bid';
 }
 
 interface Config {
   totalPixels: number;
   availablePixels: number;
-  auctionZones?: {
-    _id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    productIds: string[];
-    isEmpty: boolean;
-    pixelIndices: number[];
-    createdAt?: string;
-    updatedAt?: string;
-  }[];
+  auctionZones?: AuctionZone[];
 }
 
 interface AuctionZone {
+  _id?: string;
   id: string;
   x: number;
   y: number;
@@ -37,24 +34,26 @@ interface AuctionZone {
   products: Product[];
   isEmpty: boolean;
   pixelIndices: number[];
-  _id?: string;
   createdAt?: string;
   updatedAt?: string;
+  auctionEndDate?: string;
+  status: 'active' | 'sold' | 'expired';
+  currentBid?: number;
+  currentBidder?: string;
+  buyNowPrice?: number;
 }
 
 export default function AuctionCard({
   config,
   products,
-
 }: {
   config: Config;
   products: Product[];
-
-
 }) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const [hoveredZone, setHoveredZone] = useState<AuctionZone | null>(null);
   const [hoveredProduct, setHoveredProduct] = useState<Product | null>(null);
@@ -67,32 +66,30 @@ export default function AuctionCard({
   const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const { user } = useAuth();
+  const [auctionDuration, setAuctionDuration] = useState<3 | 7>(3); // Default to 3 days
+  const [showAuctionModal, setShowAuctionModal] = useState(false);
 
   const isAdmin = user?.isAdmin;
-  const pixelSize = 10;
+  const pixelSize = 12;
   const cols = 200;
   const rows = 5000;
 
   const productMap = useRef<Record<number, Product>>({});
   const blockedPixels = useRef<Set<number>>(new Set());
 
+  // Initialize auction zones from config
   useEffect(() => {
     if (config?.auctionZones) {
-      const zones = config.auctionZones.map(zone => ({
+      const zones = config.auctionZones.map((zone:any) => ({
+        ...zone,
         id: zone._id || `zone-${Date.now()}`,
-        x: zone.x,
-        y: zone.y,
-        width: zone.width,
-        height: zone.height,
-        products: zone.productIds
-          ? products.filter(p => zone.productIds.includes(p._id))
-          : [],
-        isEmpty: zone.isEmpty,
-        pixelIndices: zone.pixelIndices,
-        _id: zone._id,
-        createdAt: zone.createdAt,
-        updatedAt: zone.updatedAt
+        products: zone.products || products.filter(p => 
+          zone.products?.some((zp:any) => zp._id === p._id)
+        ),
+        isEmpty: zone.isEmpty || false,
+        pixelIndices: zone.pixelIndices || [],
+        status: zone.status || 'active',
+        auctionEndDate: zone.auctionEndDate || new Date(Date.now() + (zone.auctionDuration || 3) * 24 * 60 * 60 * 1000).toISOString()
       }));
       setAuctionZones(zones);
 
@@ -107,6 +104,21 @@ export default function AuctionCard({
     }
   }, [config, products]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const updatedZones = auctionZones.map((zone:any) => {
+        if (zone.status === 'active' && zone.auctionEndDate && new Date(zone.auctionEndDate) < now) {
+          return { ...zone, status: 'expired' };
+        }
+        return zone;
+      });
+      setAuctionZones(updatedZones);
+    }, 60000); 
+
+    return () => clearInterval(interval);
+  }, [auctionZones]);
+
   const preloadImages = useCallback(() => {
     products.forEach((product) => {
       if (!imageCache.current[product.images[0]]) {
@@ -116,16 +128,6 @@ export default function AuctionCard({
       }
     });
   }, [products]);
-
-  // useEffect(() => {
-  //   productMap.current = {};
-  //   products.forEach((product) => {
-  //     for (let i = 0; i < product.pixelCount; i++) {
-  //       productMap.current[product.pixelIndex + i] = product;
-  //     }
-  //   });
-  //   preloadImages();
-  // }, [products, preloadImages]);
 
   const getPixelIndices = useCallback((x: number, y: number, width: number, height: number): number[] => {
     const indices: number[] = [];
@@ -166,132 +168,165 @@ export default function AuctionCard({
     );
   }, [getPixelIndices, auctionZones]);
 
-useEffect(() => {
-  productMap.current = {};
-  products.forEach((product:any) => {
-    // Check if pixelIndices exists and is an array before iterating
-    if (Array.isArray(product.pixelIndices)) {
-      product.pixelIndices.forEach((index:any) => {
-        productMap.current[index] = product;
-      });
-    } else if (product.pixelIndex !== undefined && product.pixelCount !== undefined) {
-      // Fallback for older product format that might only have pixelIndex and pixelCount
-      for (let i = 0; i < product.pixelCount; i++) {
-        productMap.current[product.pixelIndex + i] = product;
-      }
-    }
-  });
-  preloadImages();
-}, [products, preloadImages]);
-const drawCanvas = useCallback(() => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  canvas.width = cols * pixelSize;
-  canvas.height = rows * pixelSize;
-
-  // 1. Draw white background
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // 2. Draw grid lines
-  ctx.strokeStyle = "#e0e0e0";
-  ctx.lineWidth = 1;
-  for (let col = 0; col <= cols; col++) {
-    ctx.beginPath();
-    ctx.moveTo(col * pixelSize, 0);
-    ctx.lineTo(col * pixelSize, canvas.height);
-    ctx.stroke();
-  }
-  for (let row = 0; row <= rows; row++) {
-    ctx.beginPath();
-    ctx.moveTo(0, row * pixelSize);
-    ctx.lineTo(canvas.width, row * pixelSize);
-    ctx.stroke();
-  }
-
-  // 3. Draw blocked pixels (blue background for all auction zone pixels)
-  ctx.fillStyle = "rgba(20, 81, 171, 0.2)";
-  if (config?.auctionZones) {
-    config.auctionZones.forEach((zone) => {
-      if (zone.pixelIndices) {
-        zone.pixelIndices.forEach(index => {
-          const row = Math.floor(index / cols);
-          const col = index % cols;
-          ctx.fillRect(col * pixelSize, row * pixelSize, pixelSize, pixelSize);
+  useEffect(() => {
+    productMap.current = {};
+    products.forEach((product: any) => {
+      if (Array.isArray(product.pixelIndices)) {
+        product.pixelIndices.forEach((index: any) => {
+          productMap.current[index] = product;
         });
+      } else if (product.pixelIndex !== undefined && product.pixelCount !== undefined) {
+        for (let i = 0; i < product.pixelCount; i++) {
+          productMap.current[product.pixelIndex + i] = product;
+        }
       }
     });
-  }
+    preloadImages();
+  }, [products, preloadImages]);
 
-  // 4. Draw products
-  const renderedProductIds = new Set<string>();
-  products?.forEach((product:any) => {
-    if (!renderedProductIds.has(product._id) && renderedProducts.has(product._id)) {
-      renderedProductIds.add(product._id);
-      const img = imageCache.current[product.images[0]];
-      
-      if (img?.complete) {
-        // Skip if no pixel information available
-        if (!product.pixelIndices && (product.pixelIndex === undefined || product.pixelCount === undefined)) {
-          return;
-        }
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-        // Calculate the bounding box of all pixels for this product
-        let minCol = cols, maxCol = 0;
-        let minRow = rows, maxRow = 0;
-        
-        // Handle both pixelIndices array and pixelIndex+pixelCount formats
-        const indices = product.pixelIndices || 
-          Array.from({length: product.pixelCount}, (_, i) => product.pixelIndex + i);
+    canvas.width = cols * pixelSize;
+    canvas.height = rows * pixelSize;
 
-        indices.forEach((index:any) => {
-          const row = Math.floor(index / cols);
-          const col = index % cols;
-          minCol = Math.min(minCol, col);
-          maxCol = Math.max(maxCol, col);
-          minRow = Math.min(minRow, row);
-          maxRow = Math.max(maxRow, row);
-        });
+    // Draw white background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const width = maxCol - minCol + 1;
-        const height = maxRow - minRow + 1;
+    // Draw grid lines
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.lineWidth = 1;
+    for (let col = 0; col <= cols; col++) {
+      ctx.beginPath();
+      ctx.moveTo(col * pixelSize, 0);
+      ctx.lineTo(col * pixelSize, canvas.height);
+      ctx.stroke();
+    }
+    for (let row = 0; row <= rows; row++) {
+      ctx.beginPath();
+      ctx.moveTo(0, row * pixelSize);
+      ctx.lineTo(canvas.width, row * pixelSize);
+      ctx.stroke();
+    }
 
-        // Draw the image across all pixels
-        ctx.drawImage(
-          img,
-          minCol * pixelSize,
-          minRow * pixelSize,
-          width * pixelSize,
-          height * pixelSize
-        );
+    // Draw auction zones with different colors based on status
+    if (config?.auctionZones) {
+      config.auctionZones.forEach((zone) => {
+        if (zone.pixelIndices) {
+          // Different colors for different statuses
+          let fillColor;
+          if (zone.status === 'sold') {
+            fillColor = "rgba(0, 200, 0, 0.2)"; // Green for sold
+          } else if (zone.status === 'expired') {
+            fillColor = "rgba(200, 0, 0, 0.2)"; // Red for expired
+          } else {
+            fillColor = "rgba(20, 81, 171, 0.2)"; // Blue for active
+          }
 
-        // Draw red border if in auction zone
-        const isInAuctionZone = indices.some((index:any) => 
-          config?.auctionZones?.some(zone => 
-            zone.pixelIndices?.includes(index)
-          )
-        );
+          ctx.fillStyle = fillColor;
+          zone.pixelIndices.forEach(index => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            ctx.fillRect(col * pixelSize, row * pixelSize, pixelSize, pixelSize);
+          });
 
-        if (isInAuctionZone) {
-          ctx.strokeStyle = "#ff0000";
-          ctx.lineWidth = 1;
+          // Draw border for the zone
+          ctx.strokeStyle = zone.status === 'sold' ? '#00c800' : 
+                           zone.status === 'expired' ? '#c80000' : '#0064ff';
+          ctx.lineWidth = 2;
           ctx.strokeRect(
+            zone.x * pixelSize,
+            zone.y * pixelSize,
+            zone.width * pixelSize,
+            zone.height * pixelSize
+          );
+        }
+      });
+    }
+
+    if (isAdmin && currentSelection) {
+      ctx.fillStyle = "rgba(0, 100, 255, 0.3)"; 
+      ctx.fillRect(
+        currentSelection.x * pixelSize,
+        currentSelection.y * pixelSize,
+        currentSelection.width * pixelSize,
+        currentSelection.height * pixelSize
+      );
+
+      // Draw border for the selection
+      ctx.strokeStyle = "#0064ff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(
+        currentSelection.x * pixelSize,
+        currentSelection.y * pixelSize,
+        currentSelection.width * pixelSize,
+        currentSelection.height * pixelSize
+      );
+    }
+
+    // Draw products
+    const renderedProductIds = new Set<string>();
+    products?.forEach((product: any) => {
+      if (!renderedProductIds.has(product._id) && renderedProducts.has(product._id)) {
+        renderedProductIds.add(product._id);
+        const img = imageCache.current[product.images[0]];
+
+        if (img?.complete) {
+          if (!product.pixelIndices && (product.pixelIndex === undefined || product.pixelCount === undefined)) {
+            return;
+          }
+
+          let minCol = cols, maxCol = 0;
+          let minRow = rows, maxRow = 0;
+
+          const indices = product.pixelIndices ||
+            Array.from({ length: product.pixelCount }, (_, i) => product.pixelIndex + i);
+
+          indices.forEach((index: any) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            minCol = Math.min(minCol, col);
+            maxCol = Math.max(maxCol, col);
+            minRow = Math.min(minRow, row);
+            maxRow = Math.max(maxRow, row);
+          });
+
+          const width = maxCol - minCol + 1;
+          const height = maxRow - minRow + 1;
+
+          ctx.drawImage(
+            img,
             minCol * pixelSize,
             minRow * pixelSize,
             width * pixelSize,
             height * pixelSize
           );
+
+          const isInAuctionZone = indices.some((index: any) =>
+            config?.auctionZones?.some(zone =>
+              zone.pixelIndices?.includes(index)
+            )
+          );
+
+          if (isInAuctionZone) {
+            ctx.strokeStyle = product.purchaseType === 'bid' ? "#ff9900" : "#00cc00";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+              minCol * pixelSize,
+              minRow * pixelSize,
+              width * pixelSize,
+              height * pixelSize
+            );
+          }
         }
       }
-    }
-  });
+    });
+  }, [products, renderedProducts, config?.auctionZones, isAdmin, currentSelection]);
 
-  // Rest of your existing drawCanvas code...
-  // [Keep all the existing auction zone and selection drawing logic]
-}, [products, renderedProducts, config?.auctionZones, isAdmin, currentSelection, isEmptyArea, isAreaOverlapping]);
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isAdmin) return;
     const canvas = canvasRef.current;
@@ -311,7 +346,8 @@ const drawCanvas = useCallback(() => {
       height: 1,
       products: [],
       isEmpty: true,
-      pixelIndices: []
+      pixelIndices: [],
+      status: 'active'
     });
     setError(null);
   };
@@ -346,7 +382,8 @@ const drawCanvas = useCallback(() => {
         height,
         products: productsInArea,
         isEmpty,
-        pixelIndices
+        pixelIndices,
+        status: 'active'
       });
       return;
     }
@@ -401,9 +438,10 @@ const drawCanvas = useCallback(() => {
     }
 
     setIsDragging(false);
+    setShowAuctionModal(true);
   };
 
-  const addCurrentSelectionToZones = () => {
+  const confirmAuctionZone = () => {
     if (!currentSelection) {
       setError("No area selected to add");
       return;
@@ -421,6 +459,8 @@ const drawCanvas = useCallback(() => {
       return;
     }
 
+    const auctionEndDate = new Date(Date.now() + auctionDuration * 24 * 60 * 60 * 1000).toISOString();
+
     const newZone: AuctionZone = {
       id: Date.now().toString(),
       x,
@@ -429,7 +469,10 @@ const drawCanvas = useCallback(() => {
       height,
       products,
       isEmpty,
-      pixelIndices
+      pixelIndices,
+      status: 'active',
+      auctionEndDate,
+      buyNowPrice: products.reduce((total, product) => total + (product.purchaseType === 'one-time' ? 1.5 : 1), 0) * pixelIndices.length
     };
 
     setAuctionZones((prev) => [...prev, newZone]);
@@ -438,6 +481,7 @@ const drawCanvas = useCallback(() => {
     });
     setCurrentSelection(null);
     setError(null);
+    setShowAuctionModal(false);
     drawCanvas();
   };
 
@@ -464,6 +508,9 @@ const drawCanvas = useCallback(() => {
             productIds: zone.products.map(p => p._id),
             isEmpty: zone.isEmpty,
             pixelIndices: zone.pixelIndices,
+            status: zone.status,
+            auctionEndDate: zone.auctionEndDate,
+            buyNowPrice: zone.buyNowPrice,
             _id: zone._id
           }))
         })
@@ -473,17 +520,9 @@ const drawCanvas = useCallback(() => {
 
       const data = await response.json();
       setAuctionZones(data.zones.map((zone: any) => ({
+        ...zone,
         id: zone._id,
-        x: zone.x,
-        y: zone.y,
-        width: zone.width,
-        height: zone.height,
-        products: products.filter(p => zone.productIds.includes(p._id)),
-        isEmpty: zone.isEmpty,
-        pixelIndices: zone.pixelIndices,
-        _id: zone._id,
-        createdAt: zone.createdAt,
-        updatedAt: zone.updatedAt
+        products: products.filter(p => zone.productIds.includes(p._id))
       })));
 
       const newBlockedPixels = new Set<number>();
@@ -554,13 +593,6 @@ const drawCanvas = useCallback(() => {
             <div className="admin-controls mb-3">
               <div className="d-flex gap-2 mb-2">
                 <button
-                  className="btn btn-primary"
-                  onClick={addCurrentSelectionToZones}
-                  disabled={!currentSelection}
-                >
-                  Add Selected Zone
-                </button>
-                <button
                   className="btn btn-success"
                   onClick={saveAuctionZones}
                   disabled={auctionZones.length === 0 || isSaving}
@@ -610,11 +642,19 @@ const drawCanvas = useCallback(() => {
                 padding: '10px',
                 borderRadius: '5px',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                border: `2px solid ${hoveredZone.isEmpty ? '#ffd700' : '#4a90e2'}`
+                border: `2px solid ${hoveredZone.status === 'sold' ? '#00c800' : 
+                        hoveredZone.status === 'expired' ? '#c80000' : '#0064ff'}`
               }}>
                 <h5>{hoveredZone.isEmpty ? 'Empty Auction Zone' : 'Product Auction Zone'}</h5>
                 <p>Size: {hoveredZone.width}x{hoveredZone.height}</p>
                 <p>Position: ({hoveredZone.x}, {hoveredZone.y})</p>
+                <p>Status: {hoveredZone.status}</p>
+                {hoveredZone.auctionEndDate && (
+                  <p>Ends: {new Date(hoveredZone.auctionEndDate).toLocaleString()}</p>
+                )}
+                {hoveredZone.buyNowPrice && (
+                  <p>Buy Now Price: ${hoveredZone.buyNowPrice.toFixed(2)}</p>
+                )}
                 {!hoveredZone.isEmpty && (
                   <div>
                     <p>Products:</p>
@@ -642,13 +682,69 @@ const drawCanvas = useCallback(() => {
                 <h5>{hoveredProduct.title}</h5>
                 <img src={hoveredProduct.images[0]} alt={hoveredProduct.title}
                   style={{ width: '100px', height: '100px', objectFit: 'cover' }} />
+                {hoveredProduct.purchaseType && (
+                  <p>Purchase Type: {hoveredProduct.purchaseType}</p>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Auction Zone Creation Modal */}
+      {showAuctionModal && currentSelection && (
+        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Create Auction Zone</h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowAuctionModal(false)}
+                />
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Auction Duration</label>
+                  <select 
+                    className="form-select"
+                    value={auctionDuration}
+                    onChange={(e) => setAuctionDuration(Number(e.target.value) as 3 | 7)}
+                  >
+                    <option value="3">3 Days</option>
+                    <option value="7">7 Days</option>
+                  </select>
+                </div>
+                <div className="alert alert-info">
+                  <p>Zone Size: {currentSelection.width}x{currentSelection.height}</p>
+                  <p>Position: ({currentSelection.x}, {currentSelection.y})</p>
+                  <p>Total Pixels: {currentSelection.pixelIndices.length}</p>
+                  {!currentSelection.isEmpty && (
+                    <p>Contains {currentSelection.products.length} product(s)</p>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowAuctionModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={confirmAuctionZone}
+                >
+                  Create Auction Zone
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

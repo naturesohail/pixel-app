@@ -78,7 +78,7 @@ export default function Pixels() {
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Pixel Configurations</h1>
-        {configs.length === 0 && ( // Only show the button if no config exists
+        {configs.length === 0 && ( 
           <button
             onClick={() => router.push('/admin/pixels/add')}
             className="btn-primary flex items-center gap-2"

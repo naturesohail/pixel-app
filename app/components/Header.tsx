@@ -9,7 +9,6 @@ export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when auth state changes
   useEffect(() => {
     setDropdownOpen(false);
   }, [isLoggedIn]);
@@ -82,8 +81,16 @@ export default function Header() {
                           className="block px-4 py-2 hover:bg-gray-100"
                           onClick={() => setDropdownOpen(false)}
                         >
-                          Bids 
+                          Bids
                         </Link>
+
+                        <Link
+                          href="/products"
+                          className="block px-4 py-2 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}>
+                          Products
+                        </Link>
+
                         <Link
                           href="/transactions"
                           className="block px-4 py-2 hover:bg-gray-100"
@@ -91,7 +98,7 @@ export default function Header() {
                         >
                           Transactions
                         </Link>
-                        
+
                         <button
                           onClick={() => {
                             logout();

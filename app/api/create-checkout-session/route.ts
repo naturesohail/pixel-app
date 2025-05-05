@@ -5,6 +5,7 @@ import Product from '@/app/lib/models/productModel';
 import dbConnect from '@/app/lib/db';
 import { Types } from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from "mongoose";
 
 cloudinary.config({
   cloud_name: "dtc1nqk9g",
@@ -12,158 +13,147 @@ cloudinary.config({
   api_secret: "o8IkkQeCn8vFEmG2gI6saI1R6mo",
 });
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe("sk_test_51R7u7XFWt2YrxyZwTMNvSl4gAgizA6e01XBp4sQGhLFId0qKAH1QdI2jFhlaFtHU9sMuPNHh8XvhB7DDQlfCnYiw00GsRA8POr", {
   apiVersion: "2025-02-24.acacia",
 });
+// ... (previous imports remain the same)
 
 export async function POST(request: Request) {
-  await dbConnect();
-
+  let dbSession;
   try {
+    await dbConnect();
+    dbSession = await mongoose.startSession();
+    dbSession.startTransaction();
+
     const { userId, pixelCount, totalPrice, productData, isOneTimePurchase } = await request.json();
 
-    if (!Types.ObjectId.isValid(userId) || !pixelCount || !productData) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    // Validate input
+    if (!Types.ObjectId.isValid(userId) || pixelCount <= 0 || !productData?.title) {
+      throw new Error('Invalid request data');
     }
 
-    const config = await PixelConfig.findOne().sort({ createdAt: -1 });
-    if (!config) {
-      return NextResponse.json(
-        { error: 'Pixel configuration not found' },
-        { status: 404 }
-      );
-    }
+    // Get latest pixel config with auction zones
+    const config = await PixelConfig.findOne().sort({ createdAt: -1 }).session(dbSession);
+    if (!config) throw new Error('Pixel configuration not found');
 
-    let processedImages: string[] = [];
-    if (Array.isArray(productData.images)) {
-      for (const image of productData.images) {
-        if (image.startsWith('data:image')) {
-          try {
-            const result = await cloudinary.uploader.upload(image, {
-              folder: `pixel-products/${userId}`,
-            });
-            processedImages.push(result.secure_url);
-          } catch (error) {
-            console.error('Cloudinary upload error:', error);
-            continue;
-          }
-        } else if (image.startsWith('http')) {
-          processedImages.push(image);
-        }
+    // Process and upload images to Cloudinary
+    const processedImages: string[] = [];
+    for (const image of productData.images) {
+      if (image.startsWith('data:image')) {
+        const result = await cloudinary.uploader.upload(image, {
+          folder: `pixel-products/${userId}`,
+        });
+        processedImages.push(result.secure_url);
+      } else if (image.startsWith('http')) {
+        processedImages.push(image);
       }
     }
 
     if (processedImages.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one valid image is required' },
-        { status: 400 }
-      );
+      throw new Error('At least one product image is required');
     }
 
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + (isOneTimePurchase ? 365 : 30));
-
-    let allocatedPixelIndices: number[] = [];
-
-    if (config.auctionZones) {
-      const availableAuctionPixels = config.auctionZones.reduce((acc: number[], zone: any) => {
-        if (zone.pixelIndices) {
-          acc.push(...zone.pixelIndices);
-        }
-        return acc;
-      }, []);
-
-      const allUsedIndices = new Set<number>();
-      const existingProducts = await Product.find({});
-      existingProducts.forEach(p => {
-        p.pixelIndices?.forEach((index: any) => allUsedIndices.add(index));
-      });
-
-      const allocatableFromAuction = availableAuctionPixels.filter((index:any) => !allUsedIndices.has(index));
-
-      allocatedPixelIndices = allocatableFromAuction.slice(0, pixelCount);
-
-      if (allocatedPixelIndices.length < pixelCount) {
-        return NextResponse.json(
-          { error: `Not enough available pixels in auction zones (${allocatedPixelIndices.length}/${pixelCount})` },
-          { status: 400 }
-        );
+    // Find zone that will contain these pixels
+    let targetZoneId = null;
+    let allocatedPixels: number[] = [];
+    
+    for (const zone of config.auctionZones) {
+      if (!zone.pixelIndices) continue;
+      
+      const availableInZone = zone.pixelIndices.filter((p:any) => 
+        !zone.productIds?.length // If zone is empty
+      );
+      
+      if (availableInZone.length >= pixelCount) {
+        targetZoneId = zone._id ? zone._id.toString() : new Types.ObjectId().toString();
+        allocatedPixels = availableInZone.slice(0, pixelCount);
+        break;
       }
-    } else if (pixelCount > 0) {
-      return NextResponse.json(
-        { error: 'No auction zones configured to allocate pixels from.' },
-        { status: 400 }
-      );
     }
 
+    if (!targetZoneId || allocatedPixels.length < pixelCount) {
+      throw new Error(`Not enough available pixels in any zone (requested: ${pixelCount})`);
+    }
 
-    // Create the product
-    const product = new Product({
+    // Create the product with zone reference
+    const [product] = await Product.create([{
       title: productData.title,
       description: productData.description,
       price: totalPrice,
-      category: productData.category || 'other',
       images: processedImages,
       url: productData.url || '',
       owner: new Types.ObjectId(userId),
       pixelCount,
-      pixelIndices: allocatedPixelIndices,
-      status: "won",
+      pixelIndices: allocatedPixels,
+      pixelIndex: allocatedPixels[0],
+      zoneId: new Types.ObjectId(targetZoneId), // Ensure proper ObjectId
+      status: 'active', // Mark as active immediately for one-time purchases
       purchaseType: isOneTimePurchase ? 'one-time' : 'bid',
-      pixelIndex: allocatedPixelIndices[0] || null, // For backward compatibility
-      expiryDate
-    });
+      expiryDate: isOneTimePurchase 
+        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year for one-time
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days for bids
+    }], { session: dbSession });
 
-    await product.save();
-
-    // Update available pixels count (we are allocating from zones, so no direct decrement here)
-
-    // Remove allocated pixels from auction zones
-    if (config.auctionZones) {
-      config.auctionZones = config.auctionZones.map((zone: any) => ({
-        ...zone,
-        pixelIndices: zone.pixelIndices?.filter((index: number) => !allocatedPixelIndices.includes(index)),
-        isEmpty: zone.pixelIndices?.filter((index: number) => !allocatedPixelIndices.includes(index)).length === 0,
-      }));
+    // Update the zone with this product
+    const zoneIndex = config.auctionZones.findIndex((z:any) => 
+      z._id?.toString() === targetZoneId
+    );
+    
+    if (zoneIndex >= 0) {
+      config.auctionZones[zoneIndex].productIds = [
+        ...(config.auctionZones[zoneIndex].productIds || []), 
+        product._id
+      ];
+      config.auctionZones[zoneIndex].pixelIndices = 
+        config.auctionZones[zoneIndex].pixelIndices.filter((p:any) => !allocatedPixels.includes(p));
+      config.auctionZones[zoneIndex].isEmpty = 
+        config.auctionZones[zoneIndex].pixelIndices.length > 0;
     }
 
-    await config.save();
+    // Update available pixels count
+    config.availablePixels = Math.max(0, config.availablePixels - pixelCount);
+    await config.save({ session: dbSession });
 
-    // Create Stripe checkout session (same as before)
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `${pixelCount} Pixel${pixelCount !== 1 ? 's' : ''}`,
-            description: `Purchase of ${pixelCount} advertising pixels`
+            name: `${productData.title} (${pixelCount} pixels)`,
+            description: productData.description.substring(0, 100),
           },
           unit_amount: Math.round(totalPrice * 100),
         },
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/success/{CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/cancel?productId=${product._id}`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}&product_id=${product._id}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/cancel`,
       metadata: {
         userId,
-        pixelCount: pixelCount.toString(),
         productId: product._id.toString(),
-        isOneTimePurchase: isOneTimePurchase.toString()
+        pixelCount: pixelCount.toString(),
+        zoneId: targetZoneId
       }
     });
 
-    return NextResponse.json({ id: session.id });
+    await dbSession.commitTransaction();
+    return NextResponse.json({ 
+      id: session.id,
+      productId: product._id,
+      zoneId: targetZoneId
+    });
 
   } catch (error) {
+    if (dbSession) await dbSession.abortTransaction();
     console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create checkout session' },
+      { error: error instanceof Error ? error.message : 'Payment processing failed' },
       { status: 500 }
     );
+  } finally {
+    if (dbSession) dbSession.endSession();
   }
 }

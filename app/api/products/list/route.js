@@ -20,10 +20,8 @@ export async function POST(request) {
       );
     }
 
-    // Convert userId to ObjectId for query
     const userIdObj = new mongoose.Types.ObjectId(userId);
 
-    // Check if user owns the pixel
     const pixel = await Pixel.findOne({ 
       index: pixelIndex, 
       owner: userIdObj 

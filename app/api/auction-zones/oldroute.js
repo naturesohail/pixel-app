@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import PixelConfig from '@/app/lib/models/pixelModel';
 import Product from '@/app/lib/models/productModel';
@@ -8,6 +7,8 @@ export async function GET() {
   await dbConnect();
   
   try {
+    
+    
     const config = await PixelConfig.findOne().sort({ createdAt: -1 })
       .populate('auctionZones.productIds');
     
@@ -54,7 +55,7 @@ export async function POST(request) {
         totalPixels: 1000000,
         availablePixels: 1000000,
         minimumOrderQuantity: 1,
-        auctionWinDays: 2
+        auctionWinDays: 2,
       });
     }
 
@@ -93,15 +94,24 @@ export async function POST(request) {
       productIds,
       isEmpty: isEmpty || productIds.length === 0,
       pixelIndices: calculatedPixelIndices,
-    
+      minimumOrderQuantity: calculatedPixelIndices.length,
+      auctionWinDays: 2,
     };
 
     config.auctionZones.push(newZone);
+    
+    // Update main config's minimumOrderQuantity based on the largest zone
+    const largestZone = config.auctionZones.reduce((prev, current) => 
+      (prev.pixelIndices.length > current.pixelIndices.length) ? prev : current
+    );
+    config.minimumOrderQuantity = largestZone.pixelIndices.length;
+    
     await config.save();
 
     return NextResponse.json({ 
       success: true, 
-      zone: config.auctionZones[config.auctionZones.length - 1] 
+      zone: config.auctionZones[config.auctionZones.length - 1],
+      updatedMinimumOrderQuantity: config.minimumOrderQuantity
     });
 
   } catch (error) {
@@ -154,16 +164,28 @@ export async function PUT(request) {
       }
     }
 
+    // Store old pixelIndices length for comparison
+    const oldPixelCount = config.auctionZones[zoneIndex].pixelIndices.length;
+    
     config.auctionZones[zoneIndex] = {
       ...config.auctionZones[zoneIndex].toObject(),
       ...updates
     };
 
+    // If pixelIndices were updated, check if we need to update the main minimumOrderQuantity
+    if (updates.pixelIndices && updates.pixelIndices.length !== oldPixelCount) {
+      const largestZone = config.auctionZones.reduce((prev, current) => 
+        (prev.pixelIndices.length > current.pixelIndices.length) ? prev : current
+      );
+      config.minimumOrderQuantity = largestZone.pixelIndices.length;
+    }
+
     await config.save();
 
     return NextResponse.json({ 
       success: true, 
-      zone: config.auctionZones[zoneIndex] 
+      zone: config.auctionZones[zoneIndex],
+      updatedMinimumOrderQuantity: config.minimumOrderQuantity
     });
 
   } catch (error) {
@@ -205,12 +227,28 @@ export async function DELETE(request) {
       );
     }
 
+    // Store the pixelIndices length before deletion
+    const deletedZonePixelCount = config.auctionZones[zoneIndex].pixelIndices.length;
+    
     config.auctionZones.splice(zoneIndex, 1);
+    
+    // Update minimumOrderQuantity if the deleted zone was the largest
+    if (config.auctionZones.length > 0) {
+      const largestZone = config.auctionZones.reduce((prev, current) => 
+        (prev.pixelIndices.length > current.pixelIndices.length) ? prev : current
+      );
+      config.minimumOrderQuantity = largestZone.pixelIndices.length;
+    } else {
+      // If no zones left, reset to default
+      config.minimumOrderQuantity = 1;
+    }
+    
     await config.save();
 
     return NextResponse.json({ 
       success: true,
-      message: 'Auction zone deleted successfully'
+      message: 'Auction zone deleted successfully',
+      updatedMinimumOrderQuantity: config.minimumOrderQuantity
     });
 
   } catch (error) {
@@ -257,11 +295,22 @@ export async function PATCH(request) {
         expiryDate: zone.expiryDate
       }));
 
+      // Update minimumOrderQuantity based on the largest zone
+      if (config.auctionZones.length > 0) {
+        const largestZone = config.auctionZones.reduce((prev, current) => 
+          (prev.pixelIndices.length > current.pixelIndices.length) ? prev : current
+        );
+        config.minimumOrderQuantity = largestZone.pixelIndices.length;
+      } else {
+        config.minimumOrderQuantity = 1;
+      }
+
       await config.save();
 
       return NextResponse.json({ 
         success: true,
-        zones: config.auctionZones
+        zones: config.auctionZones,
+        updatedMinimumOrderQuantity: config.minimumOrderQuantity
       });
     }
 
@@ -278,5 +327,3 @@ export async function PATCH(request) {
     );
   }
 }
-
-

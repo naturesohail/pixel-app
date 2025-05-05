@@ -1,3 +1,5 @@
+
+
 import mongoose, { Schema, Document } from 'mongoose';
 
 interface IBid {
@@ -9,19 +11,19 @@ interface IBid {
 }
 
 interface IAuctionZone {
-  x: number;          
-  y: number;       
-  width: number;      
-  height: number;    
-  productIds: mongoose.Types.ObjectId[]; 
-  isEmpty: boolean;  
-  basePrice?: number; 
-  currentBid?: number; 
-  expiryDate?: Date;  
-  bids: IBid[];      
-  status: 'active' | 'sold' | 'expired';
-  currentBidder?: mongoose.Types.ObjectId; 
-  buyNowPrice?: number; 
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  productIds: mongoose.Types.ObjectId[];
+  isEmpty: boolean;
+  pixelIndices: number[];
+  basePrice?: number;
+  currentBid?: number;
+  expiryDate?: Date;
+  bids: IBid[];
+  minimumOrderQuantity:number;
+  _id: mongoose.Types.ObjectId;
 }
 
 interface IPixelConfig extends Document {
@@ -32,6 +34,7 @@ interface IPixelConfig extends Document {
   minimumOrderQuantity: number;
   auctionWinDays: number;
   auctionZones: IAuctionZone[];
+  activeBidIndices: number[]; 
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +46,7 @@ const BidSchema = new Schema({
   productId: { type: Schema.Types.ObjectId, ref: 'Product' },
   status: { type: String, enum: ['active', 'won', 'lost', 'expired'], default: 'active' }
 });
+
 const AuctionZoneSchema = new Schema({
   x: { type: Number, required: true },
   y: { type: Number, required: true },
@@ -50,15 +54,11 @@ const AuctionZoneSchema = new Schema({
   height: { type: Number, required: true },
   productIds: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
   isEmpty: { type: Boolean, default: true },
+  pixelIndices: [{ type: Number }],
   basePrice: { type: Number },
   currentBid: { type: Number },
   expiryDate: { type: Date },
-  bids: [BidSchema],
-  status: { type: String, enum: ['active', 'sold', 'expired'], default: 'active' },
-  currentBidder: { type: Schema.Types.ObjectId, ref: 'User' },
-  buyNowPrice: { type: Number },
-  totalPixels: { type: Number, required: true }, 
-  pixelPrice: { type: Number, default: 0.01 } 
+  bids: [BidSchema]
 }, { _id: true, timestamps: true });
 
 const PixelConfigSchema = new Schema({
@@ -68,7 +68,8 @@ const PixelConfigSchema = new Schema({
   availablePixels: { type: Number, default: 1000000 },
   minimumOrderQuantity: { type: Number, default: 1 },
   auctionWinDays: { type: Number, default: 2 },
-  auctionZones: [AuctionZoneSchema]
+  auctionZones: [AuctionZoneSchema],
+  activeBidIndices: [{ type: Number }] 
 }, { timestamps: true });
 
 const PixelConfig = mongoose.models.PixelConfig || mongoose.model<IPixelConfig>('PixelConfig', PixelConfigSchema);

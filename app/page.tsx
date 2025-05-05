@@ -75,13 +75,12 @@ export default function HomePage() {
         const response = await fetch("/api/pixels");
         const data: PixelDataResponse = await response.json();
         if (data.success && data.config) {
-          // In HomePage.tsx
           if (data.success && data.config) {
             setPixelData({
               config: {
                 totalPixels: data.config.totalPixels,
                 availablePixels: data.config.availablePixels,
-                auctionZones: data.config.auctionZones // Add this line
+                auctionZones: data.config.auctionZones
               },
               products: data.products?.map(p => ({
                 _id: p._id,

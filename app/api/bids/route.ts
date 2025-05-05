@@ -1,46 +1,51 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/app/lib/db";
 import Bid from "@/app/lib/models/bidModel";
-import Product from "@/app/lib/models/productModel"; // Import Product model
-import PixelConfig from "@/app/lib/models/pixelModel"; // Import PixelConfig model
+import Product from "@/app/lib/models/productModel";
+import PixelConfig from "@/app/lib/models/pixelModel";
 import { Types } from "mongoose";
 import { v2 as cloudinary } from 'cloudinary';
-
+import Stripe from 'stripe';
+import mongoose from "mongoose";
 cloudinary.config({
   cloud_name: "dtc1nqk9g",
   api_key: "988391113487354",
   api_secret: "o8IkkQeCn8vFEmG2gI6saI1R6mo",
 });
 
+const stripe = new Stripe("sk_test_51R7u7XFWt2YrxyZwTMNvSl4gAgizA6e01XBp4sQGhLFId0qKAH1QdI2jFhlaFtHU9sMuPNHh8XvhB7DDQlfCnYiw00GsRA8POr", {
+  apiVersion: "2025-02-24.acacia",
+});
+
 export async function POST(request: Request) {
-  await dbConnect();
-  
+  let processedImages: string[] = [];
+  let dbSession: any;
+  let connection;
+
   try {
-    const { 
-      userId, 
-      pixelCount, 
-      bidAmount, 
-      product 
-    } = await request.json();
-    
-    // Validate inputs
-    if (!Types.ObjectId.isValid(userId) || !pixelCount || !product) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    connection = await dbConnect();
+    if (!connection || mongoose.connection.readyState !== 1) {
+      throw new Error('Failed to connect to the database');
     }
 
-    // 1. Determine bidIndex based on existing product count
-    const productsCount = await Product.countDocuments();
-    const bidIndex = productsCount; // This will be the next available index
+    // Start session
+    dbSession = await connection.startSession();
+    dbSession.startTransaction();
 
-    // 2. Check if this is first bid for this index
-    const existingBidForIndex = await Bid.findOne({ bidIndex });
-    let shouldDeductPixels = !existingBidForIndex;
+    const { userId, pixelCount, bidAmount, product } = await request.json();
+
+    // Validate inputs
+    if (!Types.ObjectId.isValid(userId) || !pixelCount || !product) {
+      throw new Error('Missing required fields');
+    }
+
+    // Get pixel config with active bid indices
+    const config = await PixelConfig.findOne().sort({ createdAt: -1 }).session(dbSession);
+    if (!config) {
+      throw new Error('Pixel configuration not found');
+    }
 
     // Process images
-    let processedImages = [];
     if (Array.isArray(product.images)) {
       for (const image of product.images) {
         if (image.startsWith('data:image')) {
@@ -60,36 +65,45 @@ export async function POST(request: Request) {
     }
 
     if (processedImages.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one valid image is required' },
-        { status: 400 }
-      );
+      throw new Error('At least one valid image is required');
     }
 
-    // Only deduct pixels if this is first bid for this index
-    if (shouldDeductPixels) {
-      const config = await PixelConfig.findOne().sort({ createdAt: -1 });
-      if (!config) {
-        return NextResponse.json(
-          { error: 'Pixel configuration not found' },
-          { status: 404 }
+    // Allocate pixel indices from auction zones
+    let allocatedPixelIndices: number[] = [];
+    let updatedZones = config.auctionZones.map((zone:any) => ({ ...zone }));
+
+    // Find available indices not in activeBidIndices
+    for (const zone of updatedZones) {
+      if (zone.pixelIndices && zone.pixelIndices.length > 0) {
+        const availableIndices = zone.pixelIndices.filter(
+          (index:any) => !config.activeBidIndices.includes(index)
         );
+
+        const needed = pixelCount - allocatedPixelIndices.length;
+        if (needed > 0 && availableIndices.length > 0) {
+          const indicesToAllocate = availableIndices.slice(0, needed);
+          allocatedPixelIndices = [...allocatedPixelIndices, ...indicesToAllocate];
+          
+          // Remove allocated indices from zone
+          zone.pixelIndices = zone.pixelIndices.filter(
+            (index:any) => !indicesToAllocate.includes(index)
+          );
+          zone.isEmpty = zone.pixelIndices.length === 0;
+        }
       }
 
-      if (config.availablePixels < pixelCount) {
-        return NextResponse.json(
-          { error: 'Not enough pixels available' },
-          { status: 400 }
-        );
-      }
-
-      await PixelConfig.findByIdAndUpdate(
-        config._id,
-        { $inc: { availablePixels: -pixelCount } }
-      );
+      if (allocatedPixelIndices.length >= pixelCount) break;
     }
 
-    // Create the bid with bidIndex
+    if (allocatedPixelIndices.length < pixelCount) {
+      throw new Error(`Not enough available pixels (${allocatedPixelIndices.length}/${pixelCount})`);
+    }
+
+    // Calculate expiry date (2 days from now)
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + config.auctionWinDays);
+
+    // Create the bid
     const bid = new Bid({
       title: product.title,
       description: product.description,
@@ -99,25 +113,84 @@ export async function POST(request: Request) {
       userId: new Types.ObjectId(userId),
       pixelCount,
       bidAmount,
-      bidIndex, // Store which index this bid is for
-      status: 'pending'
+      pixelIndices: allocatedPixelIndices,
+      status: 'active',
+      expiryDate,
+      paymentStatus: 'pending'
     });
 
-    await bid.save();
+    await bid.save({ session: dbSession });
 
-    return NextResponse.json({
+    // Update PixelConfig with new bid indices
+    config.activeBidIndices = [...new Set([...config.activeBidIndices, ...allocatedPixelIndices])];
+    
+    // Update auction zones
+    config.auctionZones = updatedZones;
+    await config.save({ session: dbSession });
+
+    // Create Stripe checkout session
+    const stripeSession = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `${pixelCount} Pixel${pixelCount !== 1 ? 's' : ''} Bid`,
+            description: `Bid for ${pixelCount} advertising pixels`
+          },
+          unit_amount: Math.round(bidAmount * 100),
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/bid-success?session_id={CHECKOUT_SESSION_ID}&bid_id=${bid._id}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/bid-cancel?bid_id=${bid._id}`,
+      metadata: {
+        userId,
+        pixelCount: pixelCount.toString(),
+        bidId: bid._id.toString(),
+        isBid: 'true'
+      }
+    });
+
+    if (!stripeSession.id) {
+      throw new Error('Failed to create Stripe session');
+    }
+
+    await dbSession.commitTransaction();
+    return NextResponse.json({ 
       success: true,
+      id: stripeSession.id,
       bid,
-      message: shouldDeductPixels 
-        ? `Pixels deducted for new bid index ${bidIndex}`
-        : `Bid placed for existing index ${bidIndex} (no pixels deducted)`
+      message: `Bid placed for pixels ${allocatedPixelIndices.join(', ')}`
     });
 
   } catch (error) {
+    if (dbSession) {
+      await dbSession.abortTransaction();
+    }
     console.error('Bid placement error:', error);
+
+    if (processedImages?.length > 0) {
+      await Promise.all(processedImages.map(async (img) => {
+        if (img.includes('res.cloudinary.com')) {
+          try {
+            const publicId = img.split('/').pop()?.split('.')[0];
+            if (publicId) await cloudinary.uploader.destroy(publicId);
+          } catch (e) {
+            console.error('Failed to cleanup image:', e);
+          }
+        }
+      }));
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to place bid' },
+      { error: error instanceof Error ? error.message : 'Bid placement failed' },
       { status: 500 }
     );
+  } finally {
+    if (dbSession) {
+      dbSession.endSession();
+    }
   }
 }

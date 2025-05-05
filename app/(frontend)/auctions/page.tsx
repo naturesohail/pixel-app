@@ -1,467 +1,212 @@
-
-
-
 "use client";
+import { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { useAuth } from '@/app/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Swal from 'sweetalert2';
+
 const stripePromise = loadStripe("pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9");
-import { useEffect, useState } from "react";
-import Header from "@/app/components/Header";
-import Footer from "@/app/components/Footer";
-import FrontendLayout from "@/app/layouts/FrontendLayout";
-import { loadStripe } from "@stripe/stripe-js";
-import { useAuth } from "@/app/context/AuthContext";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Swal from "sweetalert2";
-
-interface Product {
-  id?: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  images: string[];
-  url?: string;
-  ownerId?: string;
-  pixelIndex?: number;
-  expiryDate?: string;
-  pixelCount?: number;
-  purchaseType?: 'one-time' | 'bid';
-}
-
-interface PixelGrid {
-  totalPixels: number;
-  availablePixels: number;
-  pricePerPixel: number;
-  oneTimePrice: number;
-}
 
 export default function PixelMarketplace() {
   const router = useRouter();
-  const { user, isLoggedIn } = useAuth(); // Added isLoggedIn from AuthContext
-
-  const [pixelGrid, setPixelGrid] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pixelCount, setPixelCount] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [actionType, setActionType] = useState<"bid" | "buy">("buy");
-
-  const [productForm, setProductForm] = useState<Product>({
-    title: "",
-    description: "",
-    price: 0,
-    category: "",
-    images: [],
-    url: ""
+  const { user, isLoggedIn } = useAuth();
+  const [pixelCount, setPixelCount] = useState(1);
+  const [product, setProduct] = useState({
+    title: '',
+    description: '',
+    images: [] as File[], // Store File objects instead of URLs
+    url: ''
   });
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const DEFAULT_PRICES = {
-    bidPrice: 1.00,
-    buyPrice: 1.50
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Store File objects for upload
+    setProduct(prev => ({ ...prev, images: files }));
+
+    // Create preview URLs
+    const previews = files.map(file => URL.createObjectURL(file));
+    setPreviewImages(previews);
   };
 
-  const getCurrentPrices = () => {
-    if (!pixelGrid) return DEFAULT_PRICES;
-    return {
-      bidPrice: pixelGrid?.config?.pricePerPixel || DEFAULT_PRICES.bidPrice,
-      buyPrice: pixelGrid?.config?.oneTimePrice || DEFAULT_PRICES.buyPrice
-    };
+  const removeImage = (index: number) => {
+    setProduct(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+    setPreviewImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const { bidPrice, buyPrice } = getCurrentPrices();
-  const currentPricePerPixel = actionType === "buy" ? buyPrice : bidPrice;
-  const totalPrice = pixelCount * currentPricePerPixel;
-  const maxPixels = pixelGrid?.availablePixels || 1000;
-
-  useEffect(() => {
-    const fetchPixelGrid = async () => {
-      try {
-        const response = await fetch(`/api/pixels`);
-        if (!response.ok) throw new Error("Failed to fetch pixel grid");
-        const data = await response.json();
-        setPixelGrid(data);
-        setPixelCount(data.config.minimumOrderQuantity)
-      } catch (error) {
-        setError(error instanceof Error ? error.message : "Error fetching pixel grid");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPixelGrid();
-  }, []);
-
-  const showLoginAlert = () => {
-    Swal.fire({
-      title: "Login Required",
-      text: "You need to login to perform this action",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#4f46e5",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Login Now",
-      cancelButtonText: "Cancel"
-    }).then((result) => {
-      if (result.isConfirmed) {
-        router.push("/login");
-      }
-    });
-  };
-
-  const handleActionClick = (type: "bid" | "buy") => {
-    if (!isLoggedIn) {
-      showLoginAlert();
+  const handlePurchase = async () => {
+    if (!isLoggedIn || !user) {
+      Swal.fire({
+        title: 'Login Required',
+        text: 'You need to login to purchase pixels',
+        icon: 'warning',
+        confirmButtonText: 'Login'
+      }).then(() => router.push('/login'));
       return;
     }
-    setActionType(type);
-    setShowActionModal(true);
-  };
 
-  const handleBuyNow = async () => {
-    if (!user) {
-      showLoginAlert();
+    if (!product.title || !product.description || product.images.length === 0) {
+      Swal.fire({
+        title: 'Incomplete Form',
+        text: 'Please fill all required fields and upload at least one image',
+        icon: 'error'
+      });
       return;
     }
 
     setIsProcessing(true);
     try {
-      const stripe = await stripePromise;
-      const response = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      // Convert images to base64 for API
+      const imagePromises = product.images.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const imageBase64 = await Promise.all(imagePromises);
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user._id,
           pixelCount,
-          totalPrice,
-          productData: productForm,
+          totalPrice: pixelCount * 0.01, // Adjust based on your pricing
+          productData: {
+            ...product,
+            images: imageBase64
+          },
           isOneTimePurchase: true
         })
       });
 
-      const session = await response.json();
-      if(session.error){
-        Swal.fire({
-          title: "Checkout Failed",
-          text: session.error instanceof Error ? session.error : "Something went wrong",
-          icon: "error"
-        });
-      }
-      await stripe?.redirectToCheckout({ sessionId: session.id });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to process payment');
+
+      const stripe = await stripePromise;
+      await stripe?.redirectToCheckout({ sessionId: data.id });
+
     } catch (error) {
-      console.error("Checkout error:", error);
       Swal.fire({
-        title: "Checkout Failed",
-        text: error instanceof Error ? error.message : "Something went wrong",
-        icon: "error"
+        title: 'Error',
+        text: error instanceof Error ? error.message : 'Failed to process payment',
+        icon: 'error'
       });
     } finally {
       setIsProcessing(false);
     }
   };
-
-  const handlePlaceBid = async () => {
-    if (!user || !pixelGrid) {
-      showLoginAlert();
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const response = await fetch("/api/pixels/bid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id,
-          pixelCount,
-          totalPrice,
-          product: productForm,
-          isOneTimePurchase: false
-        })
-      });
-
-      if (!response.ok) throw new Error("Bid placement failed");
-
-      const updatedGrid = await response.json();
-      setPixelGrid(updatedGrid);
-      setShowActionModal(false);
-      Swal.fire({
-        title: "Bid Placed!",
-        text: "Your bid has been placed successfully",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      console.error("Bid error:", error);
-      Swal.fire({
-        title: "Bid Failed",
-        text: error instanceof Error ? error.message : "Something went wrong",
-        icon: "error"
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const newImages: string[] = [];
-      
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            newImages.push(event.target.result as string);
-            if (newImages.length === files.length) {
-              setProductForm(prev => ({
-                ...prev,
-                images: [...prev.images, ...newImages]
-              }));
-            }
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setProductForm(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
-
-  if (loading) return (
-    <FrontendLayout>
-      <Header />
-      <div className="container py-5 text-center">Loading pixel grid...</div>
-      <Footer />
-    </FrontendLayout>
-  );
-
-  if (error) return (
-    <FrontendLayout>
-      <Header />
-      <div className="container py-5">
-        <div className="alert alert-danger">{error}</div>
-      </div>
-      <Footer />
-    </FrontendLayout>
-  );
 
   return (
-    <FrontendLayout>
-      <Header />
-
-      <div className="container mt-5 mb-5">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>Pixel Marketplace</h1>
-          <div className="d-flex align-items-center">
-            <span className="me-3">
-              Price per pixel: ${bidPrice.toFixed(2)} (Bid) / ${buyPrice.toFixed(2)} (Buy)
-            </span>
-            {user && (
-              <button
-                className="btn btn-outline-primary"
-                onClick={() => router.push("/dashboard")}
-              >
-                My Pixels
-              </button>
-            )}
-          </div>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-6">Purchase Advertising Pixels</h1>
+      
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Pixel Information</h2>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Number of Pixels</label>
+          <input 
+            type="number" 
+            min="1" 
+            value={pixelCount}
+            onChange={(e) => setPixelCount(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-full p-2 border rounded"
+          />
+          <p className="text-sm text-gray-500 mt-1">Minimum {pixelCount} pixel(s) at $0.01 each</p>
         </div>
 
-        <div className="card mb-4 mt-5">
-          <div className="card-body">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="card-title mb-0">Purchase Pixels</h5>
-                <small className="text-muted">
-                  {pixelGrid ? `${pixelGrid.totalPixels - pixelGrid.availablePixels} pixels occupied, ${pixelGrid.availablePixels} available` : 'Loading pixel data...'}
-                </small>
-              </div>
-            </div>
-          </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Ad Title*</label>
+          <input
+            type="text"
+            value={product.title}
+            onChange={(e) => setProduct({...product, title: e.target.value})}
+            className="w-full p-2 border rounded"
+            required
+            placeholder="Your product or brand name"
+          />
         </div>
 
-        <div className="card mb-4">
-          <div className="card-body">
-            <div className="row">
-              <div className="col-md-6">
-                <div className="pixel-visualization mb-4">
-                  <div 
-                    className="pixel-box"
-                    style={{
-                      width: "100px",
-                      height: "100px",
-                      backgroundColor: "#f0f0f0",
-                      border: "1px solid #ddd",
-                      margin: "0 auto"
-                    }}
-                  />
-                  <div className="text-center mt-2">
-                    <small>Selected: {pixelCount} pixel{pixelCount !== 1 ? 's' : ''}</small>
-                  </div>
-                </div>
-              </div>
-              <div className="col-md-6">
-                <div className="alert alert-info mb-4">
-                  <div className="d-flex justify-content-between">
-                    <span>One Time Price (Buy Now):</span>
-                    <strong>${pixelGrid?.config?.oneTimePrice.toFixed(2)}</strong>
-                  </div>
-                  <div className="d-flex justify-content-between">
-                    <span>Price per pixel (Bid):</span>
-                    <strong>${pixelGrid?.config?.pricePerPixel.toFixed(2)}</strong>
-                  </div>
-                </div>
-
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleActionClick("buy")}
-                    disabled={isProcessing}
-                  >
-                    Buy Now
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => handleActionClick("bid")}
-                    disabled={isProcessing}
-                  >
-                    Place Bid
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Ad Description*</label>
+          <textarea
+            value={product.description}
+            onChange={(e) => setProduct({...product, description: e.target.value})}
+            className="w-full p-2 border rounded"
+            rows={3}
+            required
+            placeholder="Describe what you're advertising"
+          />
         </div>
-      </div>
 
-      {showActionModal && (
-        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {actionType === "buy" ? "Buy Pixels" : "Place Bid for Pixels"}
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowActionModal(false)}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Ad Images*</label>
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full p-2 border rounded"
+          />
+          <p className="text-sm text-gray-500 mt-1">Upload images that will appear on your pixels</p>
+          
+          <div className="flex flex-wrap gap-4 mt-3">
+            {previewImages.map((img, i) => (
+              <div key={i} className="relative w-24 h-24 border rounded overflow-hidden">
+                <Image
+                  src={img}
+                  alt="Ad preview"
+                  fill
+                  className="object-cover"
+                  onLoad={() => URL.revokeObjectURL(img)} // Clean up memory
                 />
-              </div>
-              <div className="modal-body">
-                <form>
-                  <div className="alert alert-info mb-1">
-                    <div className="d-flex justify-content-between">
-                      <span>Total Price:</span>
-                      <strong>${totalPrice.toFixed(2)}</strong>
-                      <span>Price per pixel:</span>
-                      <strong>${actionType === "buy" ? pixelGrid?.config?.oneTimePrice : pixelGrid?.config?.pricePerPixel} </strong>
-                        <span>Number of pixels:</span>
-                      <strong>{pixelCount}</strong>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Product Title*</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={productForm.title}
-                      onChange={(e) => setProductForm({...productForm, title: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Product Images</label>
-                    <input
-                      type="file"
-                      className="form-control"
-                      multiple
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                    />
-                    <div className="d-flex flex-wrap mt-2 gap-2">
-                      {productForm.images.map((img, i) => (
-                        <div key={i} style={{ width: "80px", height: "80px", position: "relative" }}>
-                          <Image
-                            src={img}
-                            alt={`Product image ${i}`}
-                            fill
-                            style={{ objectFit: "cover" }}
-                            className="rounded"
-                          />
-                          <button 
-                            className="btn btn-sm btn-danger"
-                            style={{
-                              position: "absolute",
-                              top: "2px",
-                              right: "2px",
-                              padding: "0.1rem 0.25rem",
-                              fontSize: "0.6rem"
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              removeImage(i);
-                            }}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Product URL</label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      value={productForm.url}
-                      onChange={(e) => setProductForm({...productForm, url: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Description*</label>
-                    <textarea
-                      className="form-control"
-                      rows={3}
-                      value={productForm.description}
-                      onChange={(e) => setProductForm({...productForm, description: e.target.value})}
-                      required
-                    />
-                  </div>
-                </form>
-              </div>
-              <div className="modal-footer">
                 <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowActionModal(false)}
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={actionType === "buy" ? handleBuyNow : handlePlaceBid}
-                  disabled={isProcessing || !productForm.title || !productForm.description}
-                >
-                  {isProcessing ? "Processing..." : actionType === "buy" ? "Confirm Purchase" : "Place Bid"}
+                  ×
                 </button>
               </div>
-            </div>
+            ))}
           </div>
         </div>
-      )}
 
-      <Footer />
-    </FrontendLayout>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Destination URL</label>
+          <input
+            type="url"
+            value={product.url}
+            onChange={(e) => setProduct({...product, url: e.target.value})}
+            className="w-full p-2 border rounded"
+            placeholder="https://yourwebsite.com"
+          />
+          <p className="text-sm text-gray-500 mt-1">Where users will go when clicking your ad</p>
+        </div>
+
+        <button
+          onClick={handlePurchase}
+          disabled={isProcessing || !product.title || !product.description || product.images.length === 0}
+          className={`w-full py-3 px-4 rounded font-medium ${
+            isProcessing || !product.title || !product.description || product.images.length === 0
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          {isProcessing ? 'Processing...' : `Purchase ${pixelCount} Pixel${pixelCount !== 1 ? 's' : ''} for $${(pixelCount * 0.01).toFixed(2)}`}
+        </button>
+      </div>
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-// route.ts
 import { NextResponse } from 'next/server';
 import PixelConfig from '@/app/lib/models/pixelModel';
 import Product from '@/app/lib/models/productModel';
@@ -10,12 +9,14 @@ export async function GET() {
   await dbConnect();
   
   try {
+    
     const config = await PixelConfig.findOne().sort({ createdAt: -1 });
     if (!config) {
       return NextResponse.json(
         { error: 'Pixel configuration not found' },
         { status: 404 }
       );
+      
     }
 
     const products = await Product.find({
@@ -38,6 +39,7 @@ export async function GET() {
   }
 }
 
+
 export async function POST(request: Request) {
   try {
     
@@ -46,7 +48,14 @@ export async function POST(request: Request) {
       isConnected = true;
     }
 
-    const { pricePerPixel, oneTimePrice, totalPixels, minimumOrderQuantity, auctionWinDays } = await request.json();
+    const
+     { 
+       pricePerPixel, 
+       oneTimePrice, 
+       totalPixels,
+       minimumOrderQuantity,
+       auctionWinDays 
+      } = await request.json();
 
     const availablePixels = totalPixels;
 
@@ -79,7 +88,14 @@ export async function PUT(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const { pricePerPixel, oneTimePrice, totalPixels, minimumOrderQuantity, auctionWinDays } = await request.json();
+
+    const { 
+      pricePerPixel, 
+      oneTimePrice, 
+      totalPixels, 
+      minimumOrderQuantity, 
+      auctionWinDays
+     } = await request.json();
 
     if (!id) {
       return NextResponse.json(
