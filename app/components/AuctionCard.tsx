@@ -168,7 +168,7 @@ export default function AuctionCard({
     (x: number, y: number, width: number, height: number): Product[] => {
       const productSet = new Set<Product>();
 
-      products.forEach((product:any) => {
+      products?.forEach((product:any) => {
         if (
           product.pixelIndex !== undefined &&
           product.pixelCount !== undefined
@@ -342,7 +342,7 @@ export default function AuctionCard({
     // Draw products
     const renderedProductIds = new Set<string>();
 
-    products.forEach((product: any) => {
+    products?.forEach((product: any) => {
       if (
         !renderedProductIds.has(product._id) &&
         renderedProducts.has(product._id)
