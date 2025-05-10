@@ -25,9 +25,9 @@ const ProductSchema = new Schema<IProduct>({
   images: { type: [String], required: true },
   url: { type: String, default: '' },
   owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  pixelCount: { type: Number, required: true },
-  pixelIndices: { type: [Number], required: true },
-  pixelIndex: { type: Number, required: true },
+  // pixelCount: { type: Number, required: true },
+  // pixelIndices: { type: [Number], required: true },
+  // pixelIndex: { type: Number, required: true },
   zoneId: { type: Schema.Types.ObjectId, ref: 'PixelConfig.auctionZones' }, // Reference to zone
   status: {
     type: String,

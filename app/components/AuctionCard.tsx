@@ -9,8 +9,9 @@ interface Product {
   images: string[];
   pixelIndex: number;
   pixelCount: number;
-  purchaseType?: 'one-time' | 'bid';
+  purchaseType?: "one-time" | "bid";
   price?: number;
+  zoneId: string;
 }
 
 interface Config {
@@ -28,7 +29,7 @@ interface AuctionZone {
   height: number;
   products: Product[];
   isEmpty: boolean;
-  status: 'active' | 'sold' | 'expired';
+  status: "active" | "sold" | "expired";
   currentBid?: number;
   currentBidder?: string;
   buyNowPrice?: number;
@@ -40,10 +41,9 @@ interface AuctionZone {
 export default function AuctionCard({
   config,
   products,
-}: {
-  config: Config;
-  products: Product[];
-}) {
+}: 
+  any
+) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,12 +52,18 @@ export default function AuctionCard({
   const [hoveredZone, setHoveredZone] = useState<AuctionZone | null>(null);
   const [hoveredProduct, setHoveredProduct] = useState<Product | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(new Set());
+  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(
+    new Set()
+  );
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
-  const [auctionZones, setAuctionZones] = useState<AuctionZone[]>([]);
+  const [auctionZones, setAuctionZones] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
-  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(3);
@@ -66,8 +72,8 @@ export default function AuctionCard({
 
   const isAdmin = user?.isAdmin;
   const pixelSize = 12;
-  const cols = 200;
-  const rows = 5000;
+  const cols = 100;
+  const rows = 100;
 
   const productMap = useRef<Record<number, Product>>({});
 
@@ -79,14 +85,16 @@ export default function AuctionCard({
         .map((zone: any) => ({
           ...zone,
           id: zone._id || `zone-${Date.now()}`,
-          products: zone.products || products.filter(p => 
-            zone.products?.some((zp: any) => zp._id === p._id)
-          ),
+          products: products.find((p:any) => p.zoneId === zone._id),
           isEmpty: zone.isEmpty || false,
-          status: zone.status || 'active',
-          auctionEndDate: zone.auctionEndDate || new Date(Date.now() + (zone.auctionDuration || 3) * 24 * 60 * 60 * 1000).toISOString(),
+          status: zone.status || "active",
+          auctionEndDate:
+            zone.auctionEndDate ||
+            new Date(
+              Date.now() + (zone.auctionDuration || 3) * 24 * 60 * 60 * 1000
+            ).toISOString(),
           totalPixels: zone.width * zone.height,
-          pixelPrice: zone.pixelPrice || 0.01
+          pixelPrice: zone.pixelPrice || 0.01,
         }))
         .filter((zone: any) => {
           // Filter out expired zones that should be removed
@@ -95,7 +103,7 @@ export default function AuctionCard({
           }
           return true;
         });
-      
+      console.log("zones :>> ", zones);
       setAuctionZones(zones);
       drawCanvas();
     }
@@ -107,20 +115,24 @@ export default function AuctionCard({
       const now = new Date();
       const updatedZones = auctionZones
         .map((zone: any) => {
-          if (zone.status === 'active' && zone.auctionEndDate && new Date(zone.auctionEndDate) < now) {
-            return { ...zone, status: 'expired' };
+          if (
+            zone.status === "active" &&
+            zone.auctionEndDate &&
+            new Date(zone.auctionEndDate) < now
+          ) {
+            return { ...zone, status: "expired" };
           }
           return zone;
         })
-        .filter(zone => {
+        .filter((zone) => {
           // Remove zones that have been expired for more than 1 hour
-          if (zone.status === 'expired' && zone.auctionEndDate) {
+          if (zone.status === "expired" && zone.auctionEndDate) {
             const expiredTime = new Date(zone.auctionEndDate).getTime();
             return now.getTime() - expiredTime < 3600000; // 1 hour grace period
           }
           return true;
         });
-      
+
       if (updatedZones.length !== auctionZones.length) {
         setAuctionZones(updatedZones);
       }
@@ -129,64 +141,82 @@ export default function AuctionCard({
     return () => clearInterval(interval);
   }, [auctionZones]);
 
-  const preloadImages = useCallback(() => {
-    products.forEach((product) => {
-      if (!imageCache.current[product.images[0]]) {
-        const img = new Image();
-        img.src = product.images[0];
-        imageCache.current[product.images[0]] = img;
-      }
-    });
-  }, [products]);
+  // const preloadImages = useCallback(() => {
+  //   products.forEach((product) => {
+  //     if (!imageCache.current[product.images[0]]) {
+  //       const img = new Image();
+  //       img.src = product.images[0];
+  //       imageCache.current[product.images[0]] = img;
+  //     }
+  //   });
+  // }, [products]);
 
-  const isAreaOverlapping = useCallback((x: number, y: number, width: number, height: number): boolean => {
-    return auctionZones.some(zone =>
-      x < zone.x + zone.width &&
-      x + width > zone.x &&
-      y < zone.y + zone.height &&
-      y + height > zone.y
-    );
-  }, [auctionZones]);
+  const isAreaOverlapping = useCallback(
+    (x: number, y: number, width: number, height: number): boolean => {
+      return auctionZones.some(
+        (zone) =>
+          x < zone.x + zone.width &&
+          x + width > zone.x &&
+          y < zone.y + zone.height &&
+          y + height > zone.y
+      );
+    },
+    [auctionZones]
+  );
 
-  const findProductsInArea = useCallback((x: number, y: number, width: number, height: number): Product[] => {
-    const productSet = new Set<Product>();
-    
-    products.forEach(product => {
-      if (product.pixelIndex !== undefined && product.pixelCount !== undefined) {
-        const productX = product.pixelIndex % cols;
-        const productY = Math.floor(product.pixelIndex / cols);
-        const productWidth = product.pixelCount;
-        const productHeight = 1;
-        
-        if (productX + productWidth > x && 
-            productX < x + width && 
-            productY + productHeight > y && 
-            productY < y + height) {
-          productSet.add(product);
+  const findProductsInArea = useCallback(
+    (x: number, y: number, width: number, height: number): Product[] => {
+      const productSet = new Set<Product>();
+
+      products.forEach((product:any) => {
+        if (
+          product.pixelIndex !== undefined &&
+          product.pixelCount !== undefined
+        ) {
+          const productX = product.pixelIndex % cols;
+          const productY = Math.floor(product.pixelIndex / cols);
+          const productWidth = product.pixelCount;
+          const productHeight = 1;
+
+          if (
+            productX + productWidth > x &&
+            productX < x + width &&
+            productY + productHeight > y &&
+            productY < y + height
+          ) {
+            productSet.add(product);
+          }
         }
-      }
-    });
+      });
 
-    return Array.from(productSet);
-  }, [products]);
+      return Array.from(productSet);
+    },
+    [products]
+  );
 
-  const isEmptyArea = useCallback((x: number, y: number, width: number, height: number): boolean => {
-    const overlappingProducts = findProductsInArea(x, y, width, height);
-    return overlappingProducts.length === 0;
-  }, [findProductsInArea]);
+  const isEmptyArea = useCallback(
+    (x: number, y: number, width: number, height: number): boolean => {
+      const overlappingProducts = findProductsInArea(x, y, width, height);
+      return overlappingProducts.length === 0;
+    },
+    [findProductsInArea]
+  );
 
   useEffect(() => {
-    productMap.current = {};
-    products.forEach((product: any) => {
-      if (product.pixelIndex !== undefined && product.pixelCount !== undefined) {
-        for (let i = 0; i < product.pixelCount; i++) {
-          productMap.current[product.pixelIndex + i] = product;
+    auctionZones.forEach((zone) => {
+      if (zone?.products?.images) {
+        const img = zone?.products?.images[0] || null; // Use a placeholder if no image is available
+        if (!imageCache.current[zone._id]) {
+          laodImage(img, zone._id);
         }
       }
     });
-    preloadImages();
-  }, [products, preloadImages]);
-
+  }, [auctionZones]);
+  const laodImage = (img: string, aId: string) => {
+    const dummyImg = new Image();
+    dummyImg.src = img;
+    imageCache.current[aId] = dummyImg;
+  };
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -217,60 +247,81 @@ export default function AuctionCard({
     }
 
     // Draw auction zones
+
     auctionZones.forEach((zone) => {
+      const zoneX = zone.x * pixelSize;
+      const zoneY = zone.y * pixelSize;
+      const zoneWidth = zone.width * pixelSize;
+      const zoneHeight = zone.height * pixelSize;
+
+      // Fill background color (under the image, for transparency fallback)
       let fillColor;
-      if (zone.status === 'sold') {
+      if (zone.status === "sold") {
         fillColor = "rgba(0, 200, 0, 0.2)";
-      } else if (zone.status === 'expired') {
+      } else if (zone.status === "expired") {
         fillColor = "rgba(200, 0, 0, 0.2)";
       } else {
         fillColor = "rgba(20, 81, 171, 0.2)";
       }
 
       ctx.fillStyle = fillColor;
-      ctx.fillRect(
-        zone.x * pixelSize,
-        zone.y * pixelSize,
-        zone.width * pixelSize,
-        zone.height * pixelSize
-      );
+      ctx.fillRect(zoneX, zoneY, zoneWidth, zoneHeight);
 
-      ctx.strokeStyle = zone.status === 'sold' ? '#00c800' : 
-                       zone.status === 'expired' ? '#c80000' : '#0064ff';
+      // Draw image (if loaded)
+      const img = imageCache.current[zone._id];
+      if (img) {
+        if (img?.complete) {
+          ctx.drawImage(img, zoneX, zoneY, zoneWidth, zoneHeight);
+        } else if (img) {
+          img.onload = () => {
+            ctx.drawImage(img, zoneX, zoneY, zoneWidth, zoneHeight);
+          };
+        }
+      }
+
+      // Stroke border
+      ctx.strokeStyle =
+        zone.status === "sold"
+          ? "#00c800"
+          : zone.status === "expired"
+          ? "#c80000"
+          : "#0064ff";
       ctx.lineWidth = 2;
-      ctx.strokeRect(
-        zone.x * pixelSize,
-        zone.y * pixelSize,
-        zone.width * pixelSize,
-        zone.height * pixelSize
-      );
+      ctx.strokeRect(zoneX, zoneY, zoneWidth, zoneHeight);
 
-      // Draw zone info text
+      // Draw info text (on top)
       if (zone.width > 5 && zone.height > 5) {
-        ctx.fillStyle = zone.status === 'sold' ? '#004d00' : 
-                       zone.status === 'expired' ? '#800000' : '#003366';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
+        ctx.fillStyle =
+          zone.status === "sold"
+            ? "#004d00"
+            : zone.status === "expired"
+            ? "#800000"
+            : "#003366";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+
         ctx.fillText(
-          `${zone.width}x${zone.height} (${zone.totalPixels}px)`, 
-          (zone.x + zone.width/2) * pixelSize, 
-          (zone.y + zone.height/2) * pixelSize
+          `${zone.width}x${zone.height} (${zone.totalPixels}px)`,
+          zoneX + zoneWidth / 2,
+          zoneY + zoneHeight / 2
         );
-        
+
         if (zone.auctionEndDate) {
           const endDate = new Date(zone.auctionEndDate);
-          const daysLeft = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          const daysLeft = Math.ceil(
+            (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+          );
           ctx.fillText(
-            `Ends in ${daysLeft}d`, 
-            (zone.x + zone.width/2) * pixelSize, 
-            (zone.y + zone.height/2) * pixelSize + 15
+            `Ends in ${daysLeft}d`,
+            zoneX + zoneWidth / 2,
+            zoneY + zoneHeight / 2 + 15
           );
         }
       }
     });
 
     if (isAdmin && currentSelection) {
-      ctx.fillStyle = "rgba(0, 100, 255, 0.3)"; 
+      ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
       ctx.fillRect(
         currentSelection.x * pixelSize,
         currentSelection.y * pixelSize,
@@ -290,12 +341,21 @@ export default function AuctionCard({
 
     // Draw products
     const renderedProductIds = new Set<string>();
-    products.forEach((product: any) => {
-      if (!renderedProductIds.has(product._id) && renderedProducts.has(product._id)) {
-        renderedProductIds.add(product._id);
-        const img = imageCache.current[product.images[0]];
 
-        if (img?.complete && product.pixelIndex !== undefined && product.pixelCount !== undefined) {
+    products.forEach((product: any) => {
+      if (
+        !renderedProductIds.has(product._id) &&
+        renderedProducts.has(product._id)
+      ) {
+        renderedProductIds.add(product._id);
+        // const img = imageCache.current[product.images[0]];
+        const img = imageCache.current["auctionZoneImage"];
+
+        if (
+          img?.complete &&
+          product.pixelIndex !== undefined &&
+          product.pixelCount !== undefined
+        ) {
           const x = product.pixelIndex % cols;
           const y = Math.floor(product.pixelIndex / cols);
           const width = product.pixelCount;
@@ -309,15 +369,17 @@ export default function AuctionCard({
             height * pixelSize
           );
 
-          const isInAuctionZone = auctionZones.some(zone =>
-            x >= zone.x && 
-            x + width <= zone.x + zone.width &&
-            y >= zone.y &&
-            y + height <= zone.y + zone.height
+          const isInAuctionZone = auctionZones.some(
+            (zone) =>
+              x >= zone.x &&
+              x + width <= zone.x + zone.width &&
+              y >= zone.y &&
+              y + height <= zone.y + zone.height
           );
 
           if (isInAuctionZone) {
-            ctx.strokeStyle = product.purchaseType === 'bid' ? "#ff9900" : "#00cc00";
+            ctx.strokeStyle =
+              product.purchaseType === "bid" ? "#ff9900" : "#00cc00";
             ctx.lineWidth = 1;
             ctx.strokeRect(
               x * pixelSize,
@@ -343,16 +405,16 @@ export default function AuctionCard({
     setIsDragging(true);
     setDragStart({ x, y });
     setCurrentSelection({
-      id: 'temp-' + Date.now(),
+      id: "temp-" + Date.now(),
       x,
       y,
       width: 1,
       height: 1,
       products: [],
       isEmpty: true,
-      status: 'active',
+      status: "active",
       totalPixels: 1,
-      pixelPrice: pixelPrice
+      pixelPrice: pixelPrice,
     });
     setError(null);
   };
@@ -380,16 +442,16 @@ export default function AuctionCard({
       const totalPixels = width * height;
 
       setCurrentSelection({
-        id: 'temp-' + Date.now(),
+        id: "temp-" + Date.now(),
         x: startX,
         y: startY,
         width,
         height,
         products: productsInArea,
         isEmpty,
-        status: 'active',
+        status: "active",
         totalPixels,
-        pixelPrice: pixelPrice
+        pixelPrice: pixelPrice,
       });
       return;
     }
@@ -465,7 +527,9 @@ export default function AuctionCard({
       return;
     }
 
-    const auctionEndDate = new Date(Date.now() + auctionDuration * 24 * 60 * 60 * 1000).toISOString();
+    const auctionEndDate = new Date(
+      Date.now() + auctionDuration * 24 * 60 * 60 * 1000
+    ).toISOString();
     const totalPixels = width * height;
     const basePrice = totalPixels * pixelPrice;
 
@@ -477,11 +541,13 @@ export default function AuctionCard({
       height,
       products,
       isEmpty,
-      status: 'active',
+      status: "active",
       auctionEndDate,
       totalPixels,
       pixelPrice,
-      buyNowPrice: products.reduce((total, product) => total + (product.price || 1), 0) + basePrice
+      buyNowPrice:
+        products.reduce((total, product) => total + (product.price || 1), 0) +
+        basePrice,
     };
 
     setAuctionZones((prev) => [...prev, newZone]);
@@ -495,45 +561,52 @@ export default function AuctionCard({
       setError("No auction zones to save");
       return;
     }
-  
+
     setIsSaving(true);
     try {
-      const response = await fetch('/api/auction-zones', {
-        method: 'PATCH',
+      const response = await fetch("/api/auction-zones", {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          action: 'saveAll',
-          zones: auctionZones.map(zone => ({
+          action: "saveAll",
+          zones: auctionZones.map((zone) => ({
             x: zone.x,
             y: zone.y,
             width: zone.width,
             height: zone.height,
-            productIds: zone.products.map(p => p._id),
+            productIds: [],
             isEmpty: zone.isEmpty,
             status: zone.status,
             auctionEndDate: zone.auctionEndDate,
             buyNowPrice: zone.buyNowPrice,
             totalPixels: zone.totalPixels, // Include totalPixels
-            pixelPrice: zone.pixelPrice
-          }))
-        })
+            pixelPrice: zone.pixelPrice,
+          })),
+        }),
       });
-  
-      if (!response.ok) throw new Error('Failed to save auction zones');
-  
+     
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error("Cannot add new zones while another zone is active");
+        }
+        throw new Error("Failed to save auction zones");
+      }
+
       const data = await response.json();
-      setAuctionZones(data.zones.map((zone: any) => ({
-        ...zone,
-        id: zone._id,
-        products: products.filter(p => zone.productIds.includes(p._id))
-      })));
-  
+      setAuctionZones(
+        data.zones.map((zone: any) => ({
+          ...zone,
+          id: zone._id,
+          products: products.find((p:any) => zone.productIds.includes(p._id)),
+        }))
+      );
+
       setError(null);
-      alert('Auction zones saved successfully!');
+      alert("Auction zones saved successfully!");
     } catch (err: any) {
-      setError(err.message || 'Failed to save auction zones');
+      setError(err.message || "Failed to save auction zones");
     } finally {
       setIsSaving(false);
     }
@@ -561,21 +634,21 @@ export default function AuctionCard({
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newlyRendered = new Set<string>();
-      products.forEach((product) => {
-        const img = imageCache.current[product.images[0]];
-        if (img?.complete && !renderedProducts.has(product._id)) {
-          newlyRendered.add(product._id);
-        }
-      });
-      if (newlyRendered.size > 0) {
-        setRenderedProducts((prev) => new Set([...prev, ...newlyRendered]));
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [products, renderedProducts]);
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     const newlyRendered = new Set<string>();
+  //     products.forEach((product) => {
+  //       const img = imageCache.current[product.images[0]];
+  //       if (img?.complete && !renderedProducts.has(product._id)) {
+  //         newlyRendered.add(product._id);
+  //       }
+  //     });
+  //     if (newlyRendered.size > 0) {
+  //       setRenderedProducts((prev) => new Set([...prev, ...newlyRendered]));
+  //     }
+  //   }, 100);
+  //   return () => clearInterval(interval);
+  // }, [products, renderedProducts]);
 
   useEffect(() => {
     drawCanvas();
@@ -593,7 +666,7 @@ export default function AuctionCard({
                   onClick={saveAuctionZones}
                   disabled={auctionZones.length === 0 || isSaving}
                 >
-                  {isSaving ? 'Saving...' : 'Save All Zones'}
+                  {isSaving ? "Saving..." : "Save All Zones"}
                 </button>
                 <button
                   className="btn btn-danger"
@@ -609,14 +682,25 @@ export default function AuctionCard({
               </div>
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="alert alert-info">
-                <p>Admin Instructions: Click and drag to create auction zones. Zones must not overlap.</p>
+                <p>
+                  Admin Instructions: Click and drag to create auction zones.
+                  Zones must not overlap.
+                </p>
               </div>
             </div>
           )}
 
           <div className="position-relative">
-            <div ref={containerRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-              <div style={{ width: `${cols * pixelSize}px`, height: `${rows * pixelSize}px` }}>
+            <div
+              ref={containerRef}
+              style={{ overflowY: "auto", maxHeight: "70vh" }}
+            >
+              <div
+                style={{
+                  width: `${cols * pixelSize}px`,
+                  height: `${rows * pixelSize}px`,
+                }}
+              >
                 <canvas
                   ref={canvasRef}
                   onMouseDown={handleMouseDown}
@@ -624,33 +708,56 @@ export default function AuctionCard({
                   onMouseUp={handleMouseUp}
                   onClick={handleClick}
                   style={{
-                    cursor: isAdmin ? "crosshair" : (hoveredProduct || hoveredZone) ? "pointer" : "default",
-                    backgroundColor: "#fff"
+                    cursor: isAdmin
+                      ? "crosshair"
+                      : hoveredProduct || hoveredZone
+                      ? "pointer"
+                      : "default",
+                    backgroundColor: "#fff",
                   }}
                 />
               </div>
             </div>
 
             {hoveredZone && (
-              <div className="area-tooltip" style={{
-                position: 'fixed',
-                left: `${hoverPosition.x + 20}px`,
-                top: `${hoverPosition.y + 20}px`,
-                background: 'white',
-                padding: '10px',
-                borderRadius: '5px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                border: `2px solid ${hoveredZone.status === 'sold' ? '#00c800' : 
-                        hoveredZone.status === 'expired' ? '#c80000' : '#0064ff'}`,
-                zIndex: 1000
-              }}>
-                <h5>{hoveredZone.isEmpty ? 'Empty Auction Zone' : 'Product Auction Zone'}</h5>
-                <p>Size: {hoveredZone.width}x{hoveredZone.height} pixels</p>
+              <div
+                className="area-tooltip"
+                style={{
+                  position: "fixed",
+                  left: `${hoverPosition.x + 20}px`,
+                  top: `${hoverPosition.y + 20}px`,
+                  background: "white",
+                  padding: "10px",
+                  borderRadius: "5px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                  border: `2px solid ${
+                    hoveredZone.status === "sold"
+                      ? "#00c800"
+                      : hoveredZone.status === "expired"
+                      ? "#c80000"
+                      : "#0064ff"
+                  }`,
+                  zIndex: 1000,
+                }}
+              >
+                <h5>
+                  {hoveredZone.isEmpty
+                    ? "Empty Auction Zone"
+                    : "Product Auction Zone"}
+                </h5>
+                <p>
+                  Size: {hoveredZone.width}x{hoveredZone.height} pixels
+                </p>
                 <p>Total Pixels: {hoveredZone.totalPixels}</p>
-                <p>Position: ({hoveredZone.x}, {hoveredZone.y})</p>
+                <p>
+                  Position: ({hoveredZone.x}, {hoveredZone.y})
+                </p>
                 <p>Status: {hoveredZone.status.toUpperCase()}</p>
                 {hoveredZone.auctionEndDate && (
-                  <p>Ends: {new Date(hoveredZone.auctionEndDate).toLocaleString()}</p>
+                  <p>
+                    Ends:{" "}
+                    {new Date(hoveredZone.auctionEndDate).toLocaleString()}
+                  </p>
                 )}
                 {hoveredZone.buyNowPrice && (
                   <p>Buy Now Price: ${hoveredZone.buyNowPrice.toFixed(2)}</p>
@@ -662,7 +769,7 @@ export default function AuctionCard({
                   <div>
                     <p>Products:</p>
                     <ul>
-                      {hoveredZone.products.map(product => (
+                      {hoveredZone.products.map((product) => (
                         <li key={product._id}>{product.title}</li>
                       ))}
                     </ul>
@@ -672,35 +779,43 @@ export default function AuctionCard({
             )}
 
             {hoveredProduct && (
-              <div className="product-tooltip" style={{
-                position: 'fixed',
-                left: `${hoverPosition.x + 20}px`,
-                top: `${hoverPosition.y + 20}px`,
-                background: 'white',
-                padding: '10px',
-                borderRadius: '5px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                border: '2px solid #4a90e2',
-                zIndex: 1000
-              }}>
+              <div
+                className="product-tooltip"
+                style={{
+                  position: "fixed",
+                  left: `${hoverPosition.x + 20}px`,
+                  top: `${hoverPosition.y + 20}px`,
+                  background: "white",
+                  padding: "10px",
+                  borderRadius: "5px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                  border: "2px solid #4a90e2",
+                  zIndex: 1000,
+                }}
+              >
                 <h5>{hoveredProduct.title}</h5>
-                <img 
-                  src={hoveredProduct.images[0]} 
+                <img
+                  src={hoveredProduct.images[0]}
                   alt={hoveredProduct.title}
-                  style={{ 
-                    width: '100px', 
-                    height: '100px', 
-                    objectFit: 'cover',
-                    marginBottom: '10px'
-                  }} 
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    objectFit: "cover",
+                    marginBottom: "10px",
+                  }}
                 />
                 {hoveredProduct.purchaseType && (
-                  <p>Purchase Type: {hoveredProduct.purchaseType === 'bid' ? 'Bidding' : 'One-time Purchase'}</p>
+                  <p>
+                    Purchase Type:{" "}
+                    {hoveredProduct.purchaseType === "bid"
+                      ? "Bidding"
+                      : "One-time Purchase"}
+                  </p>
                 )}
                 {hoveredProduct.price && (
                   <p>Price: ${hoveredProduct.price.toFixed(2)}</p>
                 )}
-                <button 
+                <button
                   className="btn btn-primary btn-sm"
                   onClick={() => router.push(`/product/${hoveredProduct._id}`)}
                 >
@@ -714,14 +829,26 @@ export default function AuctionCard({
 
       {/* Auction Zone Creation Modal */}
       {showAuctionModal && currentSelection && (
-        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)", position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1050 }}>
+        <div
+          className="modal show"
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Create Auction Zone</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   onClick={() => setShowAuctionModal(false)}
                   aria-label="Close"
                 />
@@ -729,7 +856,7 @@ export default function AuctionCard({
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Auction Duration (Days)</label>
-                  <select 
+                  <select
                     className="form-select"
                     value={auctionDuration}
                     onChange={(e) => setAuctionDuration(Number(e.target.value))}
@@ -755,34 +882,67 @@ export default function AuctionCard({
                   />
                 </div>
                 <div className="alert alert-info">
-                  <p><strong>Zone Details:</strong></p>
-                  <p>Size: {currentSelection.width}x{currentSelection.height} pixels</p>
-                  <p>Total Pixels: {currentSelection.width * currentSelection.height}</p>
-                  <p>Position: ({currentSelection.x}, {currentSelection.y})</p>
-                  <p>Base Price: ${(currentSelection.width * currentSelection.height * pixelPrice).toFixed(2)}</p>
+                  <p>
+                    <strong>Zone Details:</strong>
+                  </p>
+                  <p>
+                    Size: {currentSelection.width}x{currentSelection.height}{" "}
+                    pixels
+                  </p>
+                  <p>
+                    Total Pixels:{" "}
+                    {currentSelection.width * currentSelection.height}
+                  </p>
+                  <p>
+                    Position: ({currentSelection.x}, {currentSelection.y})
+                  </p>
+                  <p>
+                    Base Price: $
+                    {(
+                      currentSelection.width *
+                      currentSelection.height *
+                      pixelPrice
+                    ).toFixed(2)}
+                  </p>
                   {!currentSelection.isEmpty && (
                     <div>
-                      <p>Contains {currentSelection.products.length} product(s):</p>
+                      <p>
+                        Contains {currentSelection.products.length} product(s):
+                      </p>
                       <ul>
-                        {currentSelection.products.map(product => (
+                        {currentSelection.products.map((product) => (
                           <li key={product._id}>
-                            {product.title} - ${product.price?.toFixed(2) || '0.00'}
+                            {product.title} - $
+                            {product.price?.toFixed(2) || "0.00"}
                           </li>
                         ))}
                       </ul>
-                      <p>Total Products Value: ${currentSelection.products.reduce((sum, p) => sum + (p.price || 0), 0).toFixed(2)}</p>
+                      <p>
+                        Total Products Value: $
+                        {currentSelection.products
+                          .reduce((sum, p) => sum + (p.price || 0), 0)
+                          .toFixed(2)}
+                      </p>
                     </div>
                   )}
-                  <p className="mt-2"><strong>Estimated Buy Now Price:</strong> ${(
-                    (currentSelection.width * currentSelection.height * pixelPrice) + 
-                    currentSelection.products.reduce((sum, p) => sum + (p.price || 0), 0)
-                  ).toFixed(2)}</p>
+                  <p className="mt-2">
+                    <strong>Estimated Buy Now Price:</strong> $
+                    {(
+                      currentSelection.width *
+                        currentSelection.height *
+                        pixelPrice +
+                      currentSelection.products.reduce(
+                        (sum, p) => sum + (p.price || 0),
+                        0
+                      )
+                    ).toFixed(2)}
+                  </p>
                 </div>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => setShowAuctionModal(false)}
                 >
                   Cancel

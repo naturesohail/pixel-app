@@ -82,13 +82,7 @@ export default function HomePage() {
                 availablePixels: data.config.availablePixels,
                 auctionZones: data.config.auctionZones
               },
-              products: data.products?.map(p => ({
-                _id: p._id,
-                title: p.title,
-                images: p.images,
-                pixelIndex: p.pixelIndex,
-                pixelCount: p.pixelCount
-              })) || []
+              products: data.products || [],
             });
           }
         }
@@ -114,8 +108,7 @@ export default function HomePage() {
                 ) : pixelData ? (
                   <div className="row">
                     <AuctionCard
-                      config={pixelData.config}
-                      products={pixelData.products}
+                    
                     />
                   </div>
                 ) : (

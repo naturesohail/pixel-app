@@ -1,19 +1,20 @@
-import { NextResponse } from 'next/server';
-import PixelConfig from '@/app/lib/models/pixelModel';
-import Product from '@/app/lib/models/productModel';
-import dbConnect from '@/app/lib/db';
+import { NextResponse } from "next/server";
+import PixelConfig from "@/app/lib/models/pixelModel";
+import Product from "@/app/lib/models/productModel";
+import dbConnect from "@/app/lib/db";
 
 export async function GET() {
   await dbConnect();
-  
+
   try {
-    const config = await PixelConfig.findOne().sort({ createdAt: -1 })
-      .populate('auctionZones.productIds')
-      .populate('auctionZones.currentBidder');
-    
+    const config = await PixelConfig.findOne()
+      .sort({ createdAt: -1 })
+      .populate("auctionZones.productIds")
+      .populate("auctionZones.currentBidder");
+
     if (!config) {
       return NextResponse.json(
-        { error: 'Pixel configuration not found' },
+        { error: "Pixel configuration not found" },
         { status: 404 }
       );
     }
@@ -34,33 +35,32 @@ export async function GET() {
       await config.save();
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      auctionZones: validZones 
+    return NextResponse.json({
+      success: true,
+      auctionZones: validZones,
     });
-
   } catch (error) {
-    console.error('Error fetching auction zones:', error);
+    console.error("Error fetching auction zones:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch auction zones' },
+      { error: "Failed to fetch auction zones" },
       { status: 500 }
     );
   }
 }
 export async function POST(request: Request) {
   await dbConnect();
-  
+
   try {
-    const { 
-      x, 
-      y, 
-      width, 
-      height, 
-      productIds = [], 
+    const {
+      x,
+      y,
+      width,
+      height,
+      productIds = [],
       isEmpty,
       auctionDuration = 3,
       buyNowPrice,
-      pixelPrice = 0.01
+      pixelPrice = 0.01,
     } = await request.json();
 
     let config = await PixelConfig.findOne().sort({ createdAt: -1 });
@@ -83,16 +83,17 @@ export async function POST(request: Request) {
     expiryDate.setDate(expiryDate.getDate() + auctionDuration);
 
     // Check for overlapping zones
-    const isOverlapping = config.auctionZones.some((zone:any) => 
-      x < zone.x + zone.width &&
-      x + width > zone.x &&
-      y < zone.y + zone.height &&
-      y + height > zone.y
+    const isOverlapping = config.auctionZones.some(
+      (zone: any) =>
+        x < zone.x + zone.width &&
+        x + width > zone.x &&
+        y < zone.y + zone.height &&
+        y + height > zone.y
     );
 
     if (isOverlapping) {
       return NextResponse.json(
-        { error: 'This zone overlaps with an existing auction zone' },
+        { error: "This zone overlaps with an existing auction zone" },
         { status: 400 }
       );
     }
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
       const products = await Product.find({ _id: { $in: productIds } });
       if (products.length !== productIds.length) {
         return NextResponse.json(
-          { error: 'One or more products not found' },
+          { error: "One or more products not found" },
           { status: 400 }
         );
       }
@@ -116,25 +117,30 @@ export async function POST(request: Request) {
       productIds,
       isEmpty: isEmpty || productIds.length === 0,
       expiryDate,
-      status: 'active',
-      buyNowPrice: buyNowPrice || (totalPixels * pixelPrice) + 
-                  (productIds.length > 0 ? 
-                    (await Product.find({ _id: { $in: productIds }})).reduce((sum, p) => sum + (p.price || 0), 0) : 0),
-      totalPixels, 
-      pixelPrice
+      status: "active",
+      buyNowPrice:
+        buyNowPrice ||
+        totalPixels * pixelPrice +
+          (productIds.length > 0
+            ? (await Product.find({ _id: { $in: productIds } })).reduce(
+                (sum, p) => sum + (p.price || 0),
+                0
+              )
+            : 0),
+      totalPixels,
+      pixelPrice,
     };
     config.auctionZones.push(newZone);
     await config.save();
 
-    return NextResponse.json({ 
-      success: true, 
-      zone: config.auctionZones[config.auctionZones.length - 1]
+    return NextResponse.json({
+      success: true,
+      zone: config.auctionZones[config.auctionZones.length - 1],
     });
-
   } catch (error) {
-    console.error('Error creating auction zone:', error);
+    console.error("Error creating auction zone:", error);
     return NextResponse.json(
-      { error: 'Failed to create auction zone' },
+      { error: "Failed to create auction zone" },
       { status: 500 }
     );
   }
@@ -142,15 +148,15 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   await dbConnect();
-  
+
   try {
     const { searchParams } = new URL(request.url);
-    const zoneId = searchParams.get('id');
+    const zoneId = searchParams.get("id");
     const updates = await request.json();
 
     if (!zoneId) {
       return NextResponse.json(
-        { error: 'Zone ID is required' },
+        { error: "Zone ID is required" },
         { status: 400 }
       );
     }
@@ -158,15 +164,17 @@ export async function PUT(request: Request) {
     const config = await PixelConfig.findOne().sort({ createdAt: -1 });
     if (!config) {
       return NextResponse.json(
-        { error: 'Pixel configuration not found' },
+        { error: "Pixel configuration not found" },
         { status: 404 }
       );
     }
 
-    const zoneIndex = config.auctionZones.findIndex((z:any) => z._id.toString() === zoneId);
+    const zoneIndex = config.auctionZones.findIndex(
+      (z: any) => z._id.toString() === zoneId
+    );
     if (zoneIndex === -1) {
       return NextResponse.json(
-        { error: 'Auction zone not found' },
+        { error: "Auction zone not found" },
         { status: 404 }
       );
     }
@@ -175,7 +183,7 @@ export async function PUT(request: Request) {
       const products = await Product.find({ _id: { $in: updates.productIds } });
       if (products.length !== updates.productIds.length) {
         return NextResponse.json(
-          { error: 'One or more products not found' },
+          { error: "One or more products not found" },
           { status: 400 }
         );
       }
@@ -184,20 +192,19 @@ export async function PUT(request: Request) {
     // Update the zone
     config.auctionZones[zoneIndex] = {
       ...config.auctionZones[zoneIndex].toObject(),
-      ...updates
+      ...updates,
     };
 
     await config.save();
 
-    return NextResponse.json({ 
-      success: true, 
-      zone: config.auctionZones[zoneIndex]
+    return NextResponse.json({
+      success: true,
+      zone: config.auctionZones[zoneIndex],
     });
-
   } catch (error) {
-    console.error('Error updating auction zone:', error);
+    console.error("Error updating auction zone:", error);
     return NextResponse.json(
-      { error: 'Failed to update auction zone' },
+      { error: "Failed to update auction zone" },
       { status: 500 }
     );
   }
@@ -205,14 +212,14 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   await dbConnect();
-  
+
   try {
     const { searchParams } = new URL(request.url);
-    const zoneId = searchParams.get('id');
+    const zoneId = searchParams.get("id");
 
     if (!zoneId) {
       return NextResponse.json(
-        { error: 'Zone ID is required' },
+        { error: "Zone ID is required" },
         { status: 400 }
       );
     }
@@ -220,15 +227,17 @@ export async function DELETE(request: Request) {
     const config = await PixelConfig.findOne().sort({ createdAt: -1 });
     if (!config) {
       return NextResponse.json(
-        { error: 'Pixel configuration not found' },
+        { error: "Pixel configuration not found" },
         { status: 404 }
       );
     }
 
-    const zoneIndex = config.auctionZones.findIndex((z:any) => z._id.toString() === zoneId);
+    const zoneIndex = config.auctionZones.findIndex(
+      (z: any) => z._id.toString() === zoneId
+    );
     if (zoneIndex === -1) {
       return NextResponse.json(
-        { error: 'Auction zone not found' },
+        { error: "Auction zone not found" },
         { status: 404 }
       );
     }
@@ -236,15 +245,14 @@ export async function DELETE(request: Request) {
     config.auctionZones.splice(zoneIndex, 1);
     await config.save();
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Auction zone deleted successfully'
+      message: "Auction zone deleted successfully",
     });
-
   } catch (error) {
-    console.error('Error deleting auction zone:', error);
+    console.error("Error deleting auction zone:", error);
     return NextResponse.json(
-      { error: 'Failed to delete auction zone' },
+      { error: "Failed to delete auction zone" },
       { status: 500 }
     );
   }
@@ -252,13 +260,13 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   await dbConnect();
-  
+
   try {
     const { action, zones } = await request.json();
 
     if (!action || !zones || !Array.isArray(zones)) {
       return NextResponse.json(
-        { error: 'Invalid request body' },
+        { error: "Invalid request body" },
         { status: 400 }
       );
     }
@@ -266,57 +274,77 @@ export async function PATCH(request: Request) {
     const config = await PixelConfig.findOne().sort({ createdAt: -1 });
     if (!config) {
       return NextResponse.json(
-        { error: 'Pixel configuration not found' },
+        { error: "Pixel configuration not found" },
         { status: 404 }
       );
     }
 
-    if (action === 'saveAll') {
-      // First validate all products
-      const allProductIds = zones.flatMap(zone => zone.productIds || []);
+    if (action === "saveAll") {
+      // Check if any zone is active
+      const hasActiveZone = config.auctionZones.some(
+        (zone:any) => zone.status === "active"
+      );
+      if (hasActiveZone) {
+        return NextResponse.json(
+          { error: "Cannot add new zones while another zone is active" },
+          { status: 409 }
+        );
+      }
+
+      // Validate all product IDs
+      const allProductIds = zones.flatMap((zone) => zone.productIds || []);
       const products = await Product.find({ _id: { $in: allProductIds } });
       if (products.length !== new Set(allProductIds).size) {
         return NextResponse.json(
-          { error: 'One or more products not found' },
+          { error: "One or more products not found" },
           { status: 400 }
         );
       }
 
       // Update all zones
-      config.auctionZones = zones.map(zone => ({
-        x: zone.x,
-        y: zone.y,
-        width: zone.width,
-        height: zone.height,
-        productIds: zone.productIds || [],
-        isEmpty: zone.isEmpty || zone.productIds?.length === 0,
-        basePrice: zone.basePrice,
-        currentBid: zone.currentBid,
-        expiryDate: zone.expiryDate,
-        status: zone.status || 'active',
-        currentBidder: zone.currentBidder,
-        buyNowPrice: zone.buyNowPrice,
-        totalPixels: zone.width * zone.height,
-        pixelPrice: zone.pixelPrice || 0.01
-      }));
+      console.log(
+        "xxxxxxx :>> ",
+        config.auctionZones.map((it:any) => it._id)
+      );
+      for (const newZone of zones) {
+        // If zone has _id and exists in config, skip it
+        console.log("newZone._id :>> ", newZone._id);
+        if (newZone.status !== "active") {
+          continue;
+        }
+
+        // Add new zone
+        config.auctionZones.push({
+          x: newZone.x,
+          y: newZone.y,
+          width: newZone.width,
+          height: newZone.height,
+          productIds: newZone.productIds || [],
+          isEmpty: newZone.isEmpty ?? newZone.productIds?.length === 0,
+          basePrice: newZone.basePrice,
+          currentBid: newZone.currentBid,
+          expiryDate: newZone.expiryDate,
+          status: newZone.status || "active",
+          currentBidder: newZone.currentBidder,
+          buyNowPrice: newZone.buyNowPrice,
+          totalPixels: newZone.width * newZone.height,
+          pixelPrice: newZone.pixelPrice || 0.01,
+        });
+      }
 
       await config.save();
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
-        zones: config.auctionZones
+        zones: config.auctionZones,
       });
     }
 
-    return NextResponse.json(
-      { error: 'Invalid action' },
-      { status: 400 }
-    );
-
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error('Error performing bulk operation:', error);
+    console.error("Error performing bulk operation:", error);
     return NextResponse.json(
-      { error: 'Failed to perform bulk operation' },
+      { error: "Failed to perform bulk operation" },
       { status: 500 }
     );
   }
