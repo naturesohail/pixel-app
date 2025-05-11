@@ -19,7 +19,6 @@ const stripe = new Stripe(
     apiVersion: "2025-02-24.acacia",
   }
 );
-// ... (previous imports remain the same)
 
 export async function POST(request: Request) {
   let dbSession;
@@ -148,6 +147,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
+
       mode: "payment",
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}&product_id=${product._id}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/cancel`,

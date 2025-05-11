@@ -68,7 +68,7 @@ export default function AuctionCard({
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(3);
   const [showAuctionModal, setShowAuctionModal] = useState(false);
-  const [pixelPrice, setPixelPrice] = useState<number>(0.01);
+  const [pixelPrice, setPixelPrice] = useState<number>(1);
 
   const isAdmin = user?.isAdmin;
   const pixelSize = 12;
@@ -97,9 +97,8 @@ export default function AuctionCard({
           pixelPrice: zone.pixelPrice || 0.01,
         }))
         .filter((zone: any) => {
-          // Filter out expired zones that should be removed
           if (zone.auctionEndDate && new Date(zone.auctionEndDate) < now) {
-            return false; // Remove expired zones
+            return false; 
           }
           return true;
         });

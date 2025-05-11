@@ -532,6 +532,7 @@ export default function BuyItNowPage() {
         </div>
       )}
 
+
       <Footer />
     </FrontendLayout>
   );
