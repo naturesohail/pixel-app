@@ -107,8 +107,9 @@ export default function HomePage() {
                   <Spinner />
                 ) : pixelData ? (
                   <div className="row">
-                    <AuctionCard
-                    
+                     <AuctionCard
+                      config={pixelData.config}
+                      products={pixelData.products}
                     />
                   </div>
                 ) : (
