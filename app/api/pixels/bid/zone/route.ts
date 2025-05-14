@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import Bid from "@/app/lib/models/bidModel";
 import dbConnect from "@/app/lib/db";
-import { Types } from "mongoose";
+import jwt from "jsonwebtoken";
 import PixelConfig from "@/app/lib/models/pixelModel";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
-  await dbConnect();
 
   try {
+    const cookieStore = cookies();
+    const authToken = (await cookieStore).get("authToken")?.value;
+    if (!authToken) return NextResponse.json(
+      { error: "unauthorized" },
+      { status: 401 }
+    );
+    const decoded: any = jwt.verify(authToken, process.env.JWT_SECRET!);
+    console.log("decoded:", decoded);
+    await dbConnect();
     const { searchParams } = new URL(request.url);
     const zoneId = searchParams.get("zoneId");
 
@@ -30,7 +39,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const auctionWinMs = (config.auctionWinDays || 0) * 1 * 60 * 1000;
+    const auctionWinMs = (config.auctionWinDays || 0) * 24 * 60 * 60 * 1000;;
     console.log("auctionWinMs :>> ", auctionWinMs);
     // Determine the highest bidAmount for this zone
     const highestBidAmount = bids.length
@@ -49,8 +58,26 @@ export async function GET(request: Request) {
         resultTime
       };
     });
+    // filter the highgest bid
+    function getHighestAndUserBid(bids: any[], userId: string) {
+      if (!Array.isArray(bids) || bids.length === 0) return { bids: [] };
 
-    return NextResponse.json({ success: true, bids: enrichedBids });
+      const highest = bids.reduce((maxBid, currentBid) =>
+        currentBid.bidAmount > maxBid.bidAmount ? currentBid : maxBid
+      );
+
+      const userBid = bids.find(bid => bid.userId.toString() === userId);
+
+      if (!userBid) return { bids: [highest] };
+
+      if (highest._id.toString() === userBid._id.toString()) {
+        // Same bid object
+        return [highest]
+      }
+
+      return [highest, userBid]
+    }
+    return NextResponse.json({ success: true, bids: getHighestAndUserBid(enrichedBids, decoded.id) });
   } catch (error) {
     console.error("Error fetching bids by zone:", error);
     return NextResponse.json(

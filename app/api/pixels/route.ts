@@ -19,7 +19,7 @@ const appendBidsInAuction = async (config: any) => {
     createdAt: -1,
   });
 
-  const auctionWinMs = (config.auctionWinDays || 0) * 1 * 60 * 1000;
+  const auctionWinMs = (config.auctionWinDays || 0) * 24 * 60 * 60 * 1000;
 
   // Determine the highest bidAmount for this zone
   const highestBidAmount = bids.length
@@ -27,8 +27,9 @@ const appendBidsInAuction = async (config: any) => {
     : 0;
 
   const enrichedBids = bids.map((bid) => {
-    const createdAtTime = new Date(bid.createdAt).getTime();
-      const resultTime = createdAtTime + auctionWinMs;
+    const createdAtTime = new Date(activeZone.createdAt).getTime();
+    console.log("bal ",createdAtTime)
+    const resultTime = createdAtTime + auctionWinMs;
 
     const expired = Date.now() > resultTime;
     const isHighest = bid.bidAmount === highestBidAmount;
