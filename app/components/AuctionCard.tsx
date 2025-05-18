@@ -68,8 +68,8 @@ export default function AuctionCard({ config, products }: any) {
 
   const isAdmin = user?.isAdmin;
   const pixelSize = 12;
-  const cols = 100;
-  const rows = 100;
+  const cols = 1000;
+  const rows = 1000;
 
   const productMap = useRef<Record<number, Product>>({});
 
@@ -255,7 +255,7 @@ export default function AuctionCard({ config, products }: any) {
         fillColor = "rgba(0, 200, 0, 0.2)";
       } else if (zone.status === "expired") {
         fillColor = "rgba(255, 0, 0, 0.2)";
-      } else if (zone.bids.length) {
+      } else if (zone?.bids?.length) {
         fillColor = "rgba(255, 111, 0, 0.52)";
       } else {
         fillColor = "rgba(20, 81, 171, 0.2)";
@@ -280,9 +280,9 @@ console.log(' zone.bids.length :>> ',  zone.status);
       ctx.strokeStyle =
         zone.status === "sold"
           ? "#00c800"
-          : zone.status === "expired"
+          : zone?.status === "expired"
           ? "#c80000"
-          : zone.bids.length
+          : zone?.bids?.length
           ? "rgb(255, 111, 0)"
           : "#0064ff";
       ctx.lineWidth = 2;
@@ -295,7 +295,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
             ? "#004d00"
             : zone.status === "expired"
             ? "#800000"
-            : zone.bids.length
+            : zone?.bids?.length
             ? "rgb(255, 111, 0)"
             : "#003366";
         ctx.font = "bold 12px Arial";

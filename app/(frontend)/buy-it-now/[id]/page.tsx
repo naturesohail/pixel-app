@@ -175,52 +175,98 @@ export default function BuyItNowPage({ params }: any) {
     }
     setShowActionModal(true);
   };
+const handleBuyNow = async () => {
+  if (!user || !pixelGrid) {
+    showLoginAlert();
+    return;
+  }
 
-  const handleBuyNow = async () => {
-    if (!user || !pixelGrid) {
-      showLoginAlert();
-      return;
+  setIsProcessing(true);
+  try {
+    const response = await fetch("/api/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user._id,
+        pixelCount,
+        totalPrice: totalPriceBid || totalPrice,
+        productData: productForm,
+        isOneTimePurchase: true,
+        targetZoneId: pixelGrid.config.auctionZones.find(
+          (z) => z.status === "active"
+        )?._id,
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
     }
 
-    setIsProcessing(true);
-    try {
-      const response = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id,
-          pixelCount,
-          totalPrice: totalPriceBid || totalPrice,
-          productData: productForm,
-          isOneTimePurchase: true,
-          targetZoneId: pixelGrid.config.auctionZones.find(
-            (z) => z.status === "active"
-          )?._id,
-        }),
-      });
-
-      const session = await response.json();
-      if (session.error) {
-        Swal.fire({
-          title: "Checkout Failed",
-          text:
-            session.error instanceof Error
-              ? session.error
-              : "Something went wrong",
-          icon: "error",
-        });
-      }
-    } catch (error) {
-      console.log("Checkout error:", error);
-      Swal.fire({
-        title: "Checkout Failed",
-        text: error instanceof Error ? error.message : "Something went wrong",
-        icon: "error",
-      });
-    } finally {
-      setIsProcessing(false);
+    // Redirect to Stripe Checkout
+    if (data.id) {
+      window.location.href = data.url; // This should be the checkout URL
+    } else {
+      throw new Error("Missing checkout session URL");
     }
-  };
+  } catch (error) {
+    console.error("Checkout error:", error);
+    Swal.fire({
+      title: "Checkout Failed",
+      text: error instanceof Error ? error.message : "Something went wrong",
+      icon: "error",
+    });
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+  // const handleBuyNow = async () => {
+  //   if (!user || !pixelGrid) {
+  //     showLoginAlert();
+  //     return;
+  //   }
+
+  //   setIsProcessing(true);
+  //   try {
+  //     const response = await fetch("/api/create-checkout-session", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         userId: user._id,
+  //         pixelCount,
+  //         totalPrice: totalPriceBid || totalPrice,
+  //         productData: productForm,
+  //         isOneTimePurchase: true,
+  //         targetZoneId: pixelGrid.config.auctionZones.find(
+  //           (z) => z.status === "active"
+  //         )?._id,
+  //       }),
+  //     });
+
+  //     const session = await response.json();
+  //     if (session.error) {
+  //       Swal.fire({
+  //         title: "Checkout Failed",
+  //         text:
+  //           session.error instanceof Error
+  //             ? session.error
+  //             : "Something went wrong",
+  //         icon: "error",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.log("Checkout error:", error);
+  //     Swal.fire({
+  //       title: "Checkout Failed",
+  //       text: error instanceof Error ? error.message : "Something went wrong",
+  //       icon: "error",
+  //     });
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
