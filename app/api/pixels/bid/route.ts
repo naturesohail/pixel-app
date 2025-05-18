@@ -91,6 +91,9 @@ export async function POST(request: Request) {
         $push: {
           "auctionZones.$[zone].bids": newBid._id,
         },
+        $set:{
+          status:""
+        }
       },
       {
         arrayFilters: [{ "zone._id": new mongoose.Types.ObjectId(zoneId) }],

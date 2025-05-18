@@ -61,7 +61,7 @@ const AuctionZoneSchema = new Schema(
     bids: [],
     status: {
       type: String,
-      enum: ["active", "sold", "expired"],
+      enum: ["active", "sold", "expired","auction"],
       default: "active",
     },
     currentBidder: { type: Schema.Types.ObjectId, ref: "User" },

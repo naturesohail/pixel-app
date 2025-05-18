@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import Swal from "sweetalert2";
 
 interface Product {
   _id: string;
@@ -38,12 +39,7 @@ interface AuctionZone {
   pixelPrice?: number;
 }
 
-export default function AuctionCard({
-  config,
-  products,
-}: 
-  any
-) {
+export default function AuctionCard({ config, products }: any) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,7 +81,7 @@ export default function AuctionCard({
         .map((zone: any) => ({
           ...zone,
           id: zone._id || `zone-${Date.now()}`,
-          products: products.find((p:any) => p.zoneId === zone._id),
+          products: products.find((p: any) => p.zoneId === zone._id),
           isEmpty: zone.isEmpty || false,
           status: zone.status || "active",
           auctionEndDate:
@@ -98,7 +94,7 @@ export default function AuctionCard({
         }))
         .filter((zone: any) => {
           if (zone.auctionEndDate && new Date(zone.auctionEndDate) < now) {
-            return false; 
+            return false;
           }
           return true;
         });
@@ -167,7 +163,7 @@ export default function AuctionCard({
     (x: number, y: number, width: number, height: number): Product[] => {
       const productSet = new Set<Product>();
 
-      products?.forEach((product:any) => {
+      products?.forEach((product: any) => {
         if (
           product.pixelIndex !== undefined &&
           product.pixelCount !== undefined
@@ -258,7 +254,9 @@ export default function AuctionCard({
       if (zone.status === "sold") {
         fillColor = "rgba(0, 200, 0, 0.2)";
       } else if (zone.status === "expired") {
-        fillColor = "rgba(200, 0, 0, 0.2)";
+        fillColor = "rgba(255, 0, 0, 0.2)";
+      } else if (zone.bids.length) {
+        fillColor = "rgba(255, 111, 0, 0.52)";
       } else {
         fillColor = "rgba(20, 81, 171, 0.2)";
       }
@@ -277,13 +275,15 @@ export default function AuctionCard({
           };
         }
       }
-
+console.log(' zone.bids.length :>> ',  zone.status);
       // Stroke border
       ctx.strokeStyle =
         zone.status === "sold"
           ? "#00c800"
           : zone.status === "expired"
           ? "#c80000"
+          : zone.bids.length
+          ? "rgb(255, 111, 0)"
           : "#0064ff";
       ctx.lineWidth = 2;
       ctx.strokeRect(zoneX, zoneY, zoneWidth, zoneHeight);
@@ -295,6 +295,8 @@ export default function AuctionCard({
             ? "#004d00"
             : zone.status === "expired"
             ? "#800000"
+            : zone.bids.length
+            ? "rgb(255, 111, 0)"
             : "#003366";
         ctx.font = "bold 12px Arial";
         ctx.textAlign = "center";
@@ -585,7 +587,7 @@ export default function AuctionCard({
           })),
         }),
       });
-     
+
       if (!response.ok) {
         if (response.status === 409) {
           throw new Error("Cannot add new zones while another zone is active");
@@ -598,7 +600,7 @@ export default function AuctionCard({
         data.zones.map((zone: any) => ({
           ...zone,
           id: zone._id,
-          products: products.find((p:any) => zone.productIds.includes(p._id)),
+          products: products.find((p: any) => zone.productIds.includes(p._id)),
         }))
       );
 
@@ -629,7 +631,10 @@ export default function AuctionCard({
     }
 
     if (hoveredZone) {
-      router.push(`/auction/${hoveredZone.id}`);
+      if (hoveredZone.status === "sold") {
+        return;
+      }
+      router.push(`/auctions/${hoveredZone.id}`);
     }
   };
 

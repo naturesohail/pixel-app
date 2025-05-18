@@ -281,15 +281,15 @@ export async function PATCH(request: Request) {
 
     if (action === "saveAll") {
       // Check if any zone is active
-      const hasActiveZone = config.auctionZones.some(
-        (zone:any) => zone.status === "active"
-      );
-      if (hasActiveZone) {
-        return NextResponse.json(
-          { error: "Cannot add new zones while another zone is active" },
-          { status: 409 }
-        );
-      }
+      // const hasActiveZone = config.auctionZones.some(
+      //   (zone:any) => zone.status === "active"
+      // );
+      // if (hasActiveZone) {
+      //   return NextResponse.json(
+      //     { error: "Cannot add new zones while another zone is active" },
+      //     { status: 409 }
+      //   );
+      // }
 
       // Validate all product IDs
       const allProductIds = zones.flatMap((zone) => zone.productIds || []);
