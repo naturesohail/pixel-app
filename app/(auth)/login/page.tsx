@@ -51,7 +51,7 @@ export default function Login() {
       }).then(() => {
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("userData", JSON.stringify(data.user));
-        router.push("/profile");
+        router.push("/");
       });
     } catch (error: any) {
       Swal.fire({

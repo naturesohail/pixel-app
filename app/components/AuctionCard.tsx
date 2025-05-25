@@ -67,7 +67,7 @@ export default function AuctionCard({ config, products }: any) {
   const [pixelPrice, setPixelPrice] = useState<number>(0);
   const [buyNowPrice, setBuyNowPrice] = useState<number>(0);
 
-  const isAdmin = user?.isAdmin;
+  const isAdmin = !!user;
   const pixelSize = 12;
   const cols = 1000;
   const rows = 1000;
@@ -627,7 +627,8 @@ export default function AuctionCard({ config, products }: any) {
     }
   };
   const handleClick = (e: React.MouseEvent) => {
-    if (isAdmin) return;
+    if(!user) return ;
+    if (user?.isAdmin) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -726,11 +727,7 @@ export default function AuctionCard({ config, products }: any) {
                   onMouseUp={handleMouseUp}
                   onClick={handleClick}
                   style={{
-                    cursor: isAdmin
-                      ? "crosshair"
-                      : hoveredProduct || hoveredZone
-                      ? "pointer"
-                      : "default",
+                    cursor: isAdmin? "crosshair" : hoveredProduct || hoveredZone ? "pointer" : "default",
                     backgroundColor: "#fff",
                   }}
                 />
@@ -980,6 +977,8 @@ export default function AuctionCard({ config, products }: any) {
                   onClick={() => {
                     setAuctionZones((prev:any)=>{
                        return prev.filter((item:any)=>{
+                           setShowAuctionModal(false);
+
                          return item.id!=currentSelection.id
                        })
                     });
