@@ -336,7 +336,7 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
 
-    if (isAdmin && currentSelection) {
+    if ( currentSelection) {
       ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
       ctx.fillRect(
         currentSelection.x * pixelSize,
@@ -410,7 +410,7 @@ export default function AuctionCard({ config, products }: any) {
   }, [products, renderedProducts, auctionZones, isAdmin, currentSelection]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isAdmin) return;
+    // if (!isAdmin) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -446,7 +446,7 @@ export default function AuctionCard({ config, products }: any) {
 
     setHoverPosition({ x: e.clientX, y: e.clientY });
 
-    if (isAdmin && isDragging && dragStart) {
+    if (isDragging && dragStart) {
       const x = Math.floor(mouseX / pixelSize);
       const y = Math.floor(mouseY / pixelSize);
       const width = Math.max(1, Math.abs(x - dragStart.x) + 1);
@@ -498,7 +498,7 @@ export default function AuctionCard({ config, products }: any) {
   };
 
   const handleMouseUp = () => {
-    if (!isAdmin || !isDragging || !currentSelection) {
+    if ( !isDragging || !currentSelection) {
       setIsDragging(false);
       return;
     }
@@ -636,7 +636,7 @@ export default function AuctionCard({ config, products }: any) {
     }
   };
   const handleClick = (e: React.MouseEvent) => {
-    if (isAdmin) return;
+    // if (isAdmin) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -735,7 +735,7 @@ export default function AuctionCard({ config, products }: any) {
                   onMouseUp={handleMouseUp}
                   onClick={handleClick}
                   style={{
-                    cursor: isAdmin
+                    cursor: isAdmin || !isAdmin
                       ? "crosshair"
                       : hoveredProduct || hoveredZone
                       ? "pointer"

@@ -41,12 +41,7 @@ interface PixelGrid {
 }
 
 
-<<<<<<< HEAD
-export default function BuyItNowPage({ params }: any) {
-
-=======
 export default function BuyItNowPage() {
->>>>>>> aad2e37c5c6d905265ca3fe9566a1b6b9e2757ff
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
