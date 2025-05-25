@@ -69,8 +69,8 @@ export default function AuctionCard({ config, products }: any) {
 
   const isAdmin = user?.isAdmin;
   const pixelSize = 12;
-  const cols = 100;
-  const rows = 100;
+  const cols = 1000;
+  const rows = 1000;
 
   const productMap = useRef<Record<number, Product>>({});
   console.log("auctionZones :>> ", auctionZones);

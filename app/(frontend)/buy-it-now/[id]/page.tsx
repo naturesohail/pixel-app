@@ -1,7 +1,5 @@
 "use client";
-const stripePromise = loadStripe(
-  "pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9"
-);
+const stripePromise = loadStripe("pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9");
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -40,18 +38,13 @@ interface PixelGrid {
     auctionZones: any[];
   };
 }
-type Props = {
-  params: {
-    id: string;
-  };
-};
 
 
 export default function BuyItNowPage({ params }: any) {
+
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
-
   const [pixelGrid, setPixelGrid] = useState<PixelGrid | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +63,6 @@ export default function BuyItNowPage({ params }: any) {
   });
   const zoneId: string = params.id;
   useEffect(() => {
-    // This effect runs only on client side
     if (typeof window !== "undefined") {
       const userData = localStorage.getItem("userData");
       if (userData) {
@@ -83,6 +75,7 @@ export default function BuyItNowPage({ params }: any) {
       }
     }
   }, []);
+
 console.log('activeAuctionZone :>> ', activeAuctionZone);
   useEffect(() => {
     if (userId === null && typeof window !== "undefined") return;
@@ -175,7 +168,8 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
     }
     setShowActionModal(true);
   };
-const handleBuyNow = async () => {
+  
+ const handleBuyNow = async () => {
   if (!user || !pixelGrid) {
     showLoginAlert();
     return;
@@ -220,7 +214,7 @@ const handleBuyNow = async () => {
   } finally {
     setIsProcessing(false);
   }
-};
+ };
 
   // const handleBuyNow = async () => {
   //   if (!user || !pixelGrid) {
