@@ -24,7 +24,7 @@ export default function PixelMarketplace({ params }: any) {
   console.log("alreadyBided :>> ", zoneId);
   useEffect(() => {
     if (!zoneId) {
-      return Swal.fire({
+       Swal.fire({
         title: "No pixels available to buy",
         icon: "warning",
         showCancelButton: true,
@@ -34,6 +34,7 @@ export default function PixelMarketplace({ params }: any) {
       }).then(() => {
         router.push("/");
       });
+      return
     }
 
     const storedUser = localStorage.getItem("userData");

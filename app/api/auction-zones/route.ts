@@ -258,7 +258,7 @@ export async function DELETE(request: Request) {
   }
 }
 
-export async function  PATCH(request: Request) {
+export async function PATCH(request: Request) {
   await dbConnect();
 
   try {
@@ -279,79 +279,78 @@ export async function  PATCH(request: Request) {
       );
     }
 
- if (action === "saveAll") {
-  const allProductIds = zones.flatMap((zone) => zone.productIds || []);
-  const products = await Product.find({ _id: { $in: allProductIds } });
+    if (action === "saveAll") {
+      const allProductIds = zones.flatMap((zone) => zone.productIds || []);
+      const products = await Product.find({ _id: { $in: allProductIds } });
 
-  if (products.length !== new Set(allProductIds).size) {
-    return NextResponse.json(
-      { error: "One or more products not found" },
-      { status: 400 }
-    );
-  }
+      if (products.length !== new Set(allProductIds).size) {
+        return NextResponse.json(
+          { error: "One or more products not found" },
+          { status: 400 }
+        );
+      }
 
-  const existingZoneMap = new Map(
-    config.auctionZones.map((zone: any) => [zone._id.toString(), zone])
-  );
+      const existingZoneMap = new Map(
+        config.auctionZones.map((zone: any) => [zone._id.toString(), zone])
+      );
 
-  const updatedZones: any[] = [];
+      const updatedZones: any[] = [];
 
-  for (const newZone of zones) {
-    const zoneId = newZone._id?.toString();
+      for (const newZone of zones) {
+        const zoneId = newZone._id?.toString();
 
-    if (zoneId && existingZoneMap.has(zoneId)) {
-      // Update existing zone
-      const existingZone = existingZoneMap.get(zoneId);
+        if (zoneId && existingZoneMap.has(zoneId)) {
+          // Update existing zone
+          const existingZone: any = existingZoneMap.get(zoneId);
+          if (!existingZone) return;
+          Object.assign(existingZone, {
+            x: newZone.x,
+            y: newZone.y,
+            width: newZone.width,
+            height: newZone.height,
+            productIds: newZone.productIds || [],
+            isEmpty: newZone.isEmpty ?? newZone.productIds?.length === 0,
+            basePrice: newZone.basePrice,
+            currentBid: newZone.currentBid,
+            expiryDate: newZone.expiryDate,
+            status: newZone.status || existingZone.status,
+            currentBidder: newZone.currentBidder,
+            buyNowPrice: newZone.buyNowPrice,
+            totalPixels: newZone.width * newZone.height,
+            pixelPrice: newZone.pixelPrice || 0.01,
+          });
 
-      Object.assign(existingZone, {
-        x: newZone.x,
-        y: newZone.y,
-        width: newZone.width,
-        height: newZone.height,
-        productIds: newZone.productIds || [],
-        isEmpty: newZone.isEmpty ?? newZone.productIds?.length === 0,
-        basePrice: newZone.basePrice,
-        currentBid: newZone.currentBid,
-        expiryDate: newZone.expiryDate,
-        status: newZone.status || existingZone.status,
-        currentBidder: newZone.currentBidder,
-        buyNowPrice: newZone.buyNowPrice,
-        totalPixels: newZone.width * newZone.height,
-        pixelPrice: newZone.pixelPrice || 0.01,
-      });
+          updatedZones.push(existingZone);
+        } else {
+          // New zone, insert
+          updatedZones.push({
+            x: newZone.x,
+            y: newZone.y,
+            width: newZone.width,
+            height: newZone.height,
+            productIds: newZone.productIds || [],
+            isEmpty: newZone.isEmpty ?? newZone.productIds?.length === 0,
+            basePrice: newZone.basePrice,
+            currentBid: newZone.currentBid,
+            expiryDate: newZone.expiryDate,
+            status: newZone.status || "active",
+            currentBidder: newZone.currentBidder,
+            buyNowPrice: newZone.buyNowPrice,
+            totalPixels: newZone.width * newZone.height,
+            pixelPrice: newZone.pixelPrice || 0.01,
+          });
+        }
+      }
 
-      updatedZones.push(existingZone);
-    } else {
-      // New zone, insert
-      updatedZones.push({
-        x: newZone.x,
-        y: newZone.y,
-        width: newZone.width,
-        height: newZone.height,
-        productIds: newZone.productIds || [],
-        isEmpty: newZone.isEmpty ?? newZone.productIds?.length === 0,
-        basePrice: newZone.basePrice,
-        currentBid: newZone.currentBid,
-        expiryDate: newZone.expiryDate,
-        status: newZone.status || "active",
-        currentBidder: newZone.currentBidder,
-        buyNowPrice: newZone.buyNowPrice,
-        totalPixels: newZone.width * newZone.height,
-        pixelPrice: newZone.pixelPrice || 0.01,
+      // Replace with updated zones
+      config.auctionZones = updatedZones;
+      await config.save();
+
+      return NextResponse.json({
+        success: true,
+        zones: config.auctionZones,
       });
     }
-  }
-
-  // Replace with updated zones
-  config.auctionZones = updatedZones;
-  await config.save();
-
-  return NextResponse.json({
-    success: true,
-    zones: config.auctionZones,
-  });
-}
-
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
@@ -362,4 +361,3 @@ export async function  PATCH(request: Request) {
     );
   }
 }
-
