@@ -118,10 +118,10 @@ export default function Pixels() {
                 configs.map((config, index) => (
                   <tr key={config._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">{index + 1}</td>
-                    <td className="px-6 py-4">${config.pricePerPixel.toFixed(2)}</td>
-                    <td className="px-6 py-4">${config.oneTimePrice.toFixed(2)}</td>
-                    <td className="px-6 py-4">{config.totalPixels.toLocaleString()}</td>
-                    <td className="px-6 py-4">{config.availablePixels.toLocaleString()}</td>
+                    <td className="px-6 py-4">${config.pricePerPixel}</td>
+                    <td className="px-6 py-4">${config.oneTimePrice?.toFixed(2)}</td>
+                    <td className="px-6 py-4">{config.totalPixels?.toLocaleString()}</td>
+                    <td className="px-6 py-4">{config.availablePixels?.toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                         {calculateSoldPercentage(config)}%

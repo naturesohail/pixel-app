@@ -62,7 +62,7 @@ export default function BuyItNowPage() {
     images: [],
     url: "",
   });
-
+console.log('activeAuctionZone :>> ', activeAuctionZone);
   useEffect(() => {
     // This effect runs only on client side
     if (typeof window !== "undefined") {
@@ -349,7 +349,7 @@ export default function BuyItNowPage() {
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
                     <span>Price per pixel:</span>
-                    <strong>${pixelGrid?.config?.pricePerPixel}</strong>
+                    <strong>${activeAuctionZone?.buyNowPrice}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
                     <span>Total Price:</span>
@@ -403,7 +403,7 @@ export default function BuyItNowPage() {
                       <strong>${totalPrice.toFixed(2)}</strong>
                       <span>Price per pixel:</span>
                       <strong>
-                        ${pixelGrid?.config.oneTimePrice?.toFixed(2) || "0.00"}
+                        ${activeAuctionZone.pixelPrice?.toFixed(2) || "0.00"}
                       </strong>
                       <span>Number of pixels:</span>
                       <strong>

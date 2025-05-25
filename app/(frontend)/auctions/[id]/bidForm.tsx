@@ -98,7 +98,7 @@ export default function BidForm({
             required
           />
           <span>
-            Instant Purchase Price ${config?.pricePerPixel}/per pixel{" "}
+            Instant Purchase Price ${activeAuctionZone?.buyNowPrice}/per pixel{" "}
             <button style={{
               backgroundColor:"green",
               padding:"5px 10px",

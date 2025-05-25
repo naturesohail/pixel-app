@@ -83,7 +83,7 @@ export default function BuyItNowPage({ params }: any) {
       }
     }
   }, []);
-
+console.log('activeAuctionZone :>> ', activeAuctionZone);
   useEffect(() => {
     if (userId === null && typeof window !== "undefined") return;
 
@@ -147,7 +147,7 @@ export default function BuyItNowPage({ params }: any) {
   };
 
   const totalPrice =
-    activeAuctionZone?.totalPixels * (pixelGrid?.config?.pricePerPixel || 0);
+    activeAuctionZone?.totalPixels * (activeAuctionZone.buyNowPrice || 0);
   const totalPriceBid =
     activeAuctionZone?.totalPixels * (bidData?.bidAmount || 0);
 
@@ -401,7 +401,7 @@ const handleBuyNow = async () => {
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
                     <span>Price per pixel:</span>
-                    <strong>${pixelGrid?.config?.pricePerPixel}</strong>
+                    <strong>${activeAuctionZone.pixelPrice}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
                     <span>Total Price:</span>

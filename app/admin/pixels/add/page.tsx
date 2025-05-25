@@ -115,7 +115,7 @@ export default function AddPixel() {
           
           <form className="grid grid-cols-1 gap-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-gray-700">Price per Pixel ($)</label>
                 <input 
                   type="number" 
@@ -127,9 +127,9 @@ export default function AddPixel() {
                   step="0.01"
                   min="0.01"
                 />
-              </div>
+              </div> */}
 
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-gray-700">One-Time Price ($)</label>
                 <input 
                   type="number" 
@@ -141,7 +141,7 @@ export default function AddPixel() {
                   step="0.01"
                   min="0.01"
                 />
-              </div>
+              </div> */}
 
               <div>
                 <label className="text-sm font-medium text-gray-700">Total Pixels Available</label>

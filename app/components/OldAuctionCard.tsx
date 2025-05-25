@@ -486,6 +486,7 @@ export default function AuctionCard({
   };
 
   const saveAuctionZones = async () => {
+    console.log('auctionZones :>> ', auctionZones);
     if (auctionZones.length === 0) {
       setError("No auction zones to save");
       return;

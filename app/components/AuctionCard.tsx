@@ -64,15 +64,16 @@ export default function AuctionCard({ config, products }: any) {
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(3);
   const [showAuctionModal, setShowAuctionModal] = useState(false);
-  const [pixelPrice, setPixelPrice] = useState<number>(1);
+  const [pixelPrice, setPixelPrice] = useState<number>(0);
+  const [buyNowPrice, setBuyNowPrice] = useState<number>(0);
 
   const isAdmin = user?.isAdmin;
   const pixelSize = 12;
-  const cols = 1000;
-  const rows = 1000;
+  const cols = 100;
+  const rows = 100;
 
   const productMap = useRef<Record<number, Product>>({});
-
+  console.log("auctionZones :>> ", auctionZones);
   // Initialize auction zones from config
   useEffect(() => {
     if (config?.auctionZones) {
@@ -103,7 +104,12 @@ export default function AuctionCard({ config, products }: any) {
       drawCanvas();
     }
   }, [config, products]);
-
+  // useEffect(() => {
+  //   if (!showAuctionModal) return;
+  //   console.log("buyNowPrice :>> ", buyNowPrice);
+  //   if (buyNowPrice <= 0 || pixelPrice <= 0) return;
+  //   confirmAuctionZone();
+  // }, [showAuctionModal, buyNowPrice, pixelPrice]);
   // Check for expired auctions periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -146,18 +152,27 @@ export default function AuctionCard({ config, products }: any) {
   //   });
   // }, [products]);
 
-  const isAreaOverlapping = useCallback(
-    (x: number, y: number, width: number, height: number): boolean => {
-      return auctionZones.some(
-        (zone) =>
-          x < zone.x + zone.width &&
-          x + width > zone.x &&
-          y < zone.y + zone.height &&
-          y + height > zone.y
-      );
-    },
-    [auctionZones]
-  );
+  const isAreaOverlapping = (zones: AuctionZone[]) => {
+    for (let i = 0; i < zones.length; i++) {
+      const a = zones[i];
+
+      for (let j = i + 1; j < zones.length; j++) {
+        const b = zones[j];
+
+        const isOverlapping =
+          a.x < b.x + b.width &&
+          a.x + a.width > b.x &&
+          a.y < b.y + b.height &&
+          a.y + a.height > b.y;
+
+        if (isOverlapping) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
 
   const findProductsInArea = useCallback(
     (x: number, y: number, width: number, height: number): Product[] => {
@@ -275,7 +290,7 @@ export default function AuctionCard({ config, products }: any) {
           };
         }
       }
-console.log(' zone.bids.length :>> ',  zone.status);
+      console.log(" zone.bids.length :>> ", zone.status);
       // Stroke border
       ctx.strokeStyle =
         zone.status === "sold"
@@ -416,6 +431,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
       status: "active",
       totalPixels: 1,
       pixelPrice: pixelPrice,
+      buyNowPrice: buyNowPrice,
     });
     setError(null);
   };
@@ -489,7 +505,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
 
     const { x, y, width, height } = currentSelection;
 
-    if (isAreaOverlapping(x, y, width, height)) {
+    if (isAreaOverlapping(auctionZones)) {
       setError("This area overlaps with an existing auction zone");
       setIsDragging(false);
       setCurrentSelection(null);
@@ -509,8 +525,9 @@ console.log(' zone.bids.length :>> ',  zone.status);
     setIsDragging(false);
     setShowAuctionModal(true);
   };
-
+  console.log("error :>> ", error);
   const confirmAuctionZone = () => {
+    console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
     if (!currentSelection) {
       setError("No area selected to add");
       return;
@@ -518,7 +535,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
 
     const { x, y, width, height, isEmpty, products } = currentSelection;
 
-    if (isAreaOverlapping(x, y, width, height)) {
+    if (isAreaOverlapping(auctionZones)) {
       setError("This area overlaps with an existing auction zone");
       return;
     }
@@ -546,18 +563,19 @@ console.log(' zone.bids.length :>> ',  zone.status);
       auctionEndDate,
       totalPixels,
       pixelPrice,
-      buyNowPrice:
-        products.reduce((total, product) => total + (product.price || 1), 0) +
-        basePrice,
+      buyNowPrice,
     };
-
-    setAuctionZones((prev) => [...prev, newZone]);
-    setCurrentSelection(null);
+    const updatedZones = [...auctionZones, newZone];
+    setAuctionZones(updatedZones);
+    // setCurrentSelection(null);
     setError(null);
-    setShowAuctionModal(false);
+    // setShowAuctionModal(false);
     drawCanvas();
+    return updatedZones;
   };
   const saveAuctionZones = async () => {
+    const auctionZones = confirmAuctionZone();
+    if (!auctionZones) return;
     if (auctionZones.length === 0) {
       setError("No auction zones to save");
       return;
@@ -565,6 +583,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
 
     setIsSaving(true);
     try {
+      // console.log('object :>> ', object);
       const response = await fetch("/api/auction-zones", {
         method: "PATCH",
         headers: {
@@ -572,19 +591,22 @@ console.log(' zone.bids.length :>> ',  zone.status);
         },
         body: JSON.stringify({
           action: "saveAll",
-          zones: auctionZones.map((zone) => ({
-            x: zone.x,
-            y: zone.y,
-            width: zone.width,
-            height: zone.height,
-            productIds: [],
-            isEmpty: zone.isEmpty,
-            status: zone.status,
-            auctionEndDate: zone.auctionEndDate,
-            buyNowPrice: zone.buyNowPrice,
-            totalPixels: zone.totalPixels, // Include totalPixels
-            pixelPrice: zone.pixelPrice,
-          })),
+          zones: auctionZones.map((zone) => {
+            // console.log('zone :>> ', zone);
+            return {
+              x: zone.x,
+              y: zone.y,
+              width: zone.width,
+              height: zone.height,
+              productIds: [],
+              isEmpty: zone.isEmpty,
+              status: zone.status,
+              auctionEndDate: zone.auctionEndDate,
+              buyNowPrice: zone.buyNowPrice,
+              totalPixels: zone.totalPixels, // Include totalPixels
+              pixelPrice: zone.pixelPrice,
+            };
+          }),
         }),
       });
 
@@ -606,6 +628,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
 
       setError(null);
       alert("Auction zones saved successfully!");
+      setShowAuctionModal(false);
     } catch (err: any) {
       setError(err.message || "Failed to save auction zones");
     } finally {
@@ -662,7 +685,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
     <div className="col-lg-12">
       <div className="card million-dollar-style">
         <div className="card-body">
-          {isAdmin && (
+          {/* {isAdmin && (
             <div className="admin-controls mb-3">
               <div className="d-flex gap-2 mb-2">
                 <button
@@ -692,7 +715,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
                 </p>
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="position-relative">
             <div
@@ -764,7 +787,12 @@ console.log(' zone.bids.length :>> ',  zone.status);
                   </p>
                 )}
                 {hoveredZone.buyNowPrice && (
-                  <p>Buy Now Price: ${hoveredZone.buyNowPrice.toFixed(2)}</p>
+                  <p>
+                    Buy Now Price: $
+                    {hoveredZone.buyNowPrice <= 1
+                      ? ""
+                      : hoveredZone.buyNowPrice.toFixed(2)}
+                  </p>
                 )}
                 {hoveredZone.pixelPrice && (
                   <p>Pixel Price: ${hoveredZone.pixelPrice.toFixed(2)}</p>
@@ -853,7 +881,7 @@ console.log(' zone.bids.length :>> ',  zone.status);
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() => setShowAuctionModal(false)}
+                  onClick={() => {}}
                   aria-label="Close"
                 />
               </div>
@@ -881,8 +909,19 @@ console.log(' zone.bids.length :>> ',  zone.status);
                     className="form-control"
                     min="0.01"
                     step="0.01"
-                    value={pixelPrice}
+                    value={pixelPrice <= 0 ? "" : pixelPrice}
                     onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
+                  />
+                </div>{" "}
+                <div className="mb-3">
+                  <label className="form-label">Direct Buy Price ($)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    min="0.01"
+                    step="0.01"
+                    value={buyNowPrice <= 0 ? "" : buyNowPrice}
+                    onChange={(e) => setBuyNowPrice(parseFloat(e.target.value))}
                   />
                 </div>
                 <div className="alert alert-info">
@@ -947,14 +986,21 @@ console.log(' zone.bids.length :>> ',  zone.status);
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => setShowAuctionModal(false)}
+                  onClick={() => {
+                    setAuctionZones([]);
+                    setCurrentSelection(null);
+                    setError(null);
+                    drawCanvas();
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={confirmAuctionZone}
+                  onClick={() => {
+                    saveAuctionZones();
+                  }}
                 >
                   Create Auction Zone
                 </button>

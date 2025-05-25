@@ -21,8 +21,21 @@ export default function PixelMarketplace({ params }: any) {
   const [config, setconfig] = useState();
   const router = useRouter();
   const zoneId: string = params.id;
-  console.log("alreadyBided :>> ", alreadyBided);
+  console.log("alreadyBided :>> ", zoneId);
   useEffect(() => {
+    if (!zoneId) {
+      return Swal.fire({
+        title: "No pixels available to buy",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#4f46e5",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "OK",
+      }).then(() => {
+        router.push("/");
+      });
+    }
+
     const storedUser = localStorage.getItem("userData");
     if (storedUser) {
       try {
@@ -45,8 +58,7 @@ export default function PixelMarketplace({ params }: any) {
           setconfig(data.config);
           const activezone = (data.config.auctionZones || []).find(
             (zone: any) => {
-              
-              return zone._id === zoneId
+              return zone._id === zoneId;
             }
           );
           if (!activezone) {
@@ -72,7 +84,7 @@ export default function PixelMarketplace({ params }: any) {
 
     fetchPixelData();
   }, [router]);
-
+  console.log("activeAuctionZone :>> ", activeAuctionZone);
   return (
     <>
       {loading ? (
