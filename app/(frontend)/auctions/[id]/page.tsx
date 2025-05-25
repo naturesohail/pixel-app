@@ -14,6 +14,7 @@ type Props = {
   };
 };
 export default function PixelMarketplace({ params }: any) {
+  
   const [userId, setUserId] = useState<string | "">("");
   const [loading, setLoading] = useState(false);
   const [alreadyBided, setAlreadyBided] = useState(false);

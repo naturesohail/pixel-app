@@ -11,6 +11,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Swal from "sweetalert2";
+import { useParams } from 'next/navigation';
 
 interface Product {
   id?: string;
@@ -47,7 +48,7 @@ type Props = {
 };
 
 
-export default function BuyItNowPage({ params }: any) {
+export default function BuyItNowPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
@@ -68,7 +69,9 @@ export default function BuyItNowPage({ params }: any) {
     images: [],
     url: "",
   });
-  const zoneId: string = params.id;
+  const params = useParams();
+  ;
+  const zoneId = params.id
   useEffect(() => {
     // This effect runs only on client side
     if (typeof window !== "undefined") {
@@ -147,7 +150,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
   };
 
   const totalPrice =
-    activeAuctionZone?.totalPixels * (activeAuctionZone.buyNowPrice || 0);
+    activeAuctionZone?.totalPixels * (activeAuctionZone?.buyNowPrice || 0);
   const totalPriceBid =
     activeAuctionZone?.totalPixels * (bidData?.bidAmount || 0);
 
@@ -401,7 +404,7 @@ const handleBuyNow = async () => {
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
                     <span>Price per pixel:</span>
-                    <strong>${activeAuctionZone.pixelPrice}</strong>
+                    <strong>${activeAuctionZone?.pixelPrice}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
                     <span>Total Price:</span>
