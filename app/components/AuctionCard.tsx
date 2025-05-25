@@ -104,13 +104,6 @@ export default function AuctionCard({ config, products }: any) {
       drawCanvas();
     }
   }, [config, products]);
-  // useEffect(() => {
-  //   if (!showAuctionModal) return;
-  //   console.log("buyNowPrice :>> ", buyNowPrice);
-  //   if (buyNowPrice <= 0 || pixelPrice <= 0) return;
-  //   confirmAuctionZone();
-  // }, [showAuctionModal, buyNowPrice, pixelPrice]);
-  // Check for expired auctions periodically
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -517,115 +510,107 @@ export default function AuctionCard({ config, products }: any) {
     setShowAuctionModal(true);
   };
   console.log("error :>> ", error);
-  const confirmAuctionZone = () => {
-    console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
-    if (!currentSelection) {
-      setError("No area selected to add");
-      return;
-    }
 
-    const { x, y, width, height, isEmpty, products } = currentSelection;
+ const confirmAuctionZone = () => {
+  console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
+  if (!currentSelection) {
+    setError("No area selected to add");
+    return null;
+  }
 
-    if (isAreaOverlapping(auctionZones)) {
-      setError("This area overlaps with an existing auction zone");
-      return;
-    }
+  const { x, y, width, height, isEmpty, products } = currentSelection;
 
-    if (!isEmpty && products.length === 0) {
-      setError("This area contains products but could not identify them");
-      return;
-    }
+  if (isAreaOverlapping(auctionZones)) {
+    setError("This area overlaps with an existing auction zone");
+    return null;
+  }
 
-    const auctionEndDate = new Date(
-      Date.now() + auctionDuration * 24 * 60 * 60 * 1000
-    ).toISOString();
-    const totalPixels = width * height;
-    const basePrice = totalPixels * pixelPrice;
+  if (!isEmpty && products.length === 0) {
+    setError("This area contains products but could not identify them");
+    return null;
+  }
 
-    const newZone: AuctionZone = {
-      id: Date.now().toString(),
-      x,
-      y,
-      width,
-      height,
-      products,
-      isEmpty,
-      status: "active",
-      auctionEndDate,
-      totalPixels,
-      pixelPrice,
-      buyNowPrice,
-    };
-    const updatedZones = [...auctionZones, newZone];
-    setAuctionZones(updatedZones);
-    // setCurrentSelection(null);
-    setError(null);
-    // setShowAuctionModal(false);
-    drawCanvas();
-    return updatedZones;
+  const auctionEndDate = new Date(
+    Date.now() + auctionDuration * 24 * 60 * 60 * 1000
+  ).toISOString();
+  const totalPixels = width * height;
+  const basePrice = totalPixels * pixelPrice;
+
+  const newZone: AuctionZone = {
+    id: Date.now().toString(),
+    x,
+    y,
+    width,
+    height,
+    products,
+    isEmpty,
+    status: "active",
+    auctionEndDate,
+    totalPixels,
+    pixelPrice,
+    buyNowPrice,
   };
+
+  setAuctionZones([...auctionZones, newZone]);
+  setError(null);
+  drawCanvas();
+
+  return newZone; // only return the new zone
+};
+
   const saveAuctionZones = async () => {
-    const auctionZones = confirmAuctionZone();
-    if (!auctionZones) return;
-    if (auctionZones.length === 0) {
-      setError("No auction zones to save");
-      return;
-    }
+  const newZone = confirmAuctionZone();
+  if (!newZone) return;
 
-    setIsSaving(true);
-    try {
-      // console.log('object :>> ', object);
-      const response = await fetch("/api/auction-zones", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "saveAll",
-          zones: auctionZones.map((zone) => {
-            // console.log('zone :>> ', zone);
-            return {
-              x: zone.x,
-              y: zone.y,
-              width: zone.width,
-              height: zone.height,
-              productIds: [],
-              isEmpty: zone.isEmpty,
-              status: zone.status,
-              auctionEndDate: zone.auctionEndDate,
-              buyNowPrice: zone.buyNowPrice,
-              totalPixels: zone.totalPixels, // Include totalPixels
-              pixelPrice: zone.pixelPrice,
-            };
-          }),
-        }),
-      });
+  setIsSaving(true);
+  try {
+    const response = await fetch("/api/auction-zones", {
+      method: "POST", // Use POST for creating a single new zone
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        x: newZone.x,
+        y: newZone.y,
+        width: newZone.width,
+        height: newZone.height,
+        productIds: newZone.products.map((p: any) => p._id),
+        isEmpty: newZone.isEmpty,
+        status: newZone.status,
+        auctionEndDate: newZone.auctionEndDate,
+        buyNowPrice: newZone.buyNowPrice,
+        totalPixels: newZone.totalPixels,
+        pixelPrice: newZone.pixelPrice,
+      }),
+    });
 
-      if (!response.ok) {
-        if (response.status === 409) {
-          throw new Error("Cannot add new zones while another zone is active");
-        }
-        throw new Error("Failed to save auction zones");
+    if (!response.ok) {
+      if (response.status === 409) {
+        throw new Error("Cannot add new zones while another zone is active");
       }
-
-      const data = await response.json();
-      setAuctionZones(
-        data.zones.map((zone: any) => ({
-          ...zone,
-          id: zone._id,
-          products: products.find((p: any) => zone.productIds.includes(p._id)),
-        }))
-      );
-
-      setError(null);
-      alert("Auction zones saved successfully!");
-      setShowAuctionModal(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to save auction zones");
-    } finally {
-      setIsSaving(false);
+      throw new Error("Failed to save auction zone");
     }
-  };
+
+    const data = await response.json();
+
+    // Optionally replace the temp ID with the real one from server
+    setAuctionZones((prev) =>
+      prev.map((zone) =>
+        zone.id === newZone.id ? { ...zone, id: data._id } : zone
+      )
+    );
+
+    setError(null);
+    alert("Auction zone saved successfully!");
+    setShowAuctionModal(false);
+  } catch (err: any) {
+    setError(err.message || "Failed to save auction zone");
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+
   const handleClick = (e: React.MouseEvent) => {
     if(!user) return ;
     if (user?.isAdmin) return;
@@ -956,18 +941,7 @@ export default function AuctionCard({ config, products }: any) {
                       </p>
                     </div>
                   )}
-                  <p className="mt-2">
-                    <strong>Estimated Buy Now Price:</strong> $
-                    {(
-                      currentSelection.width *
-                        currentSelection.height *
-                        pixelPrice +
-                      currentSelection.products.reduce(
-                        (sum, p) => sum + (p.price || 0),
-                        0
-                      )
-                    ).toFixed(2)}
-                  </p>
+                 
                 </div>
               </div>
               <div className="modal-footer">

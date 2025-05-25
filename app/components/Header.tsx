@@ -43,11 +43,7 @@ export default function Header() {
                     Auctions
                   </Link>
                 </li>
-                <li>
-                  <Link href="/buy-it-now" className="hover:text-blue-600">
-                    Buy it Now
-                  </Link>
-                </li>
+              
                 <li>
                   <Link href="/contact" className="hover:text-blue-600">
                     Contact Us
