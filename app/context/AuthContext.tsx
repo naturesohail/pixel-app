@@ -9,7 +9,6 @@ type User = {
   role: string;
   phone: string;
   isAdmin: boolean;
-  isuser:boolean;
   isActive: boolean;
 };
 
