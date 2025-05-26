@@ -585,6 +585,8 @@ export default function AuctionCard({ config, products }: any) {
           router.push("/login");
         }
       } else {
+            setShowAuctionModal(false);
+
         router.push(`/auctions/${hoveredZone.id}`);
       }
     }
