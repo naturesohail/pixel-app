@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     // 2. Find the product
     const product = await Product.findById(productId);
     if (!product) throw new Error('Product not found');
-    if (product.status === 'won') return NextResponse.json({ success: true }); // Already processed
+    if (product.status === 'active') return NextResponse.json({ success: true }); // Already processed
 
     // 3. Allocate pixels
     const config = await PixelConfig.findOne().sort({ createdAt: -1 });
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Update database
-    product.status = 'won';
+    product.status = 'active';
     product.pixelIndices = allocatedPixels;
     product.pixelIndex = allocatedPixels[0];
     product.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days

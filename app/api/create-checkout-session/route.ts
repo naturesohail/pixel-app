@@ -6,8 +6,6 @@ import dbConnect from "@/app/lib/db";
 import { Types } from "mongoose";
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
-
-
 cloudinary.config({
   cloud_name: "dtc1nqk9g",
   api_key: "988391113487354",
@@ -96,7 +94,7 @@ export async function POST(request: Request) {
     await config.save({ session: dbSession });
 
 
-    
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
