@@ -2,64 +2,23 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
-import Swal from "sweetalert2";
-
-interface Product {
-  _id: string;
-  title: string;
-  images: string[];
-  pixelIndex: number;
-  pixelCount: number;
-  purchaseType?: "one-time" | "bid";
-  price?: number;
-  zoneId: string;
-}
-
-interface Config {
-  totalPixels: number;
-  availablePixels: number;
-  auctionZones?: AuctionZone[];
-}
-
-interface AuctionZone {
-  _id?: string;
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  products: Product[];
-  isEmpty: boolean;
-  status: "active" | "sold" | "expired";
-  currentBid?: number;
-  currentBidder?: string;
-  buyNowPrice?: number;
-  auctionEndDate?: string;
-  totalPixels?: number;
-  pixelPrice?: number;
-}
+import { Product } from "../types/productTypes";
+import { AuctionZone } from "../types/AuctionZoneTypes";
 
 export default function AuctionCard({ config, products }: any) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-
-  const [hoveredZone, setHoveredZone] = useState<AuctionZone | null>(null);
+  const [hoveredZone, setHoveredZone] = useState<any | null>(null);
   const [hoveredProduct, setHoveredProduct] = useState<Product | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(
-    new Set()
-  );
+  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(new Set());
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
   const [auctionZones, setAuctionZones] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
-    null
-  );
-  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(
-    null
-  );
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(3);
@@ -470,7 +429,6 @@ export default function AuctionCard({ config, products }: any) {
 
     setHoveredProduct(null);
 
-    // Check for zone hover
     const hovered = auctionZones.find(
       (zone) =>
         x >= zone.x &&
@@ -611,10 +569,21 @@ export default function AuctionCard({ config, products }: any) {
 };
 
 
-  const handleClick = (e: React.MouseEvent) => {
-    if(!user) return ;
-    if (user?.isAdmin) return;
+const handleClick = (e: React.MouseEvent) => {
+    
+      if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
+    // Open product URL in new tab
+    window.open(hoveredZone.products.url, "_blank");
+    return;
+  }
 
+      else if (hoveredZone) {
+       if(!user) {
+        router.push(`/login`);
+       } else{
+        router.push(`/auctions/${hoveredZone.id}`);
+      }
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -625,103 +594,40 @@ export default function AuctionCard({ config, products }: any) {
     const y = Math.floor(mouseY / pixelSize);
 
     const product = productMap.current[y * cols + x];
+   
     if (product) {
       router.push(`/product/${product._id}`);
       return;
     }
-
-    if (hoveredZone) {
-      if (hoveredZone.status === "sold") {
-        return;
-      }
-      router.push(`/auctions/${hoveredZone.id}`);
-    }
-  };
-
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     const newlyRendered = new Set<string>();
-  //     products.forEach((product) => {
-  //       const img = imageCache.current[product.images[0]];
-  //       if (img?.complete && !renderedProducts.has(product._id)) {
-  //         newlyRendered.add(product._id);
-  //       }
-  //     });
-  //     if (newlyRendered.size > 0) {
-  //       setRenderedProducts((prev) => new Set([...prev, ...newlyRendered]));
-  //     }
-  //   }, 100);
-  //   return () => clearInterval(interval);
-  // }, [products, renderedProducts]);
-
+}
+  
   useEffect(() => {
     drawCanvas();
   }, [drawCanvas]);
 
   return (
+    
     <div className="col-lg-12">
       <div className="card million-dollar-style">
         <div className="card-body">
-          {/* {isAdmin && (
-            <div className="admin-controls mb-3">
-              <div className="d-flex gap-2 mb-2">
-                <button
-                  className="btn btn-success"
-                  onClick={saveAuctionZones}
-                  disabled={auctionZones.length === 0 || isSaving}
-                >
-                  {isSaving ? "Saving..." : "Save All Zones"}
-                </button>
-                <button
-                  className="btn btn-danger"
-                  onClick={() => {
-                    setAuctionZones([]);
-                    setCurrentSelection(null);
-                    setError(null);
-                    drawCanvas();
-                  }}
-                >
-                  Clear All Zones
-                </button>
-              </div>
-              {error && <div className="alert alert-danger">{error}</div>}
-              <div className="alert alert-info">
-                <p>
-                  Admin Instructions: Click and drag to create auction zones.
-                  Zones must not overlap.
-                </p>
-              </div>
-            </div>
-          )} */}
-
+        
           <div className="position-relative">
-            <div
-              ref={containerRef}
-              style={{ overflowY: "auto", maxHeight: "70vh" }}
-            >
-              <div
-                style={{
-                  width: `${cols * pixelSize}px`,
-                  height: `${rows * pixelSize}px`,
-                }}
-              >
+            <div ref={containerRef} style={{ overflowY: "auto", maxHeight: "70vh" }}>
+              <div style={{width: `${cols * pixelSize}px`,height: `${rows * pixelSize}px`}}>
                 <canvas
                   ref={canvasRef}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onClick={handleClick}
-                  style={{
-                    cursor: isAdmin? "crosshair" : hoveredProduct || hoveredZone ? "pointer" : "default",
-                    backgroundColor: "#fff",
-                  }}
+                  style={{cursor: isAdmin? "pointer" : hoveredProduct || hoveredZone ? "pointer" : "default", backgroundColor: "#fff" }}
                 />
               </div>
             </div>
 
             {hoveredZone && (
               <div
-                className="area-tooltip"
+                // className="product-tooltip"
                 style={{
                   position: "fixed",
                   left: `${hoverPosition.x + 20}px`,
@@ -737,102 +643,45 @@ export default function AuctionCard({ config, products }: any) {
                       ? "#c80000"
                       : "#0064ff"
                   }`,
+                    cursor: 'pointer !important',
                   zIndex: 1000,
-                }}
-              >
-                <h5>
-                  {hoveredZone.isEmpty
-                    ? "Empty Auction Zone"
-                    : "Product Auction Zone"}
-                </h5>
+                }}>
+
+                <h5>{hoveredZone.isEmpty? "Empty Auction Zone" : ""}</h5>
+              
+                {hoveredZone.isEmpty && (
+                <>
                 <p>
-                  Size: {hoveredZone.width}x{hoveredZone.height} pixels
+                  {}Size: {hoveredZone.width}x{hoveredZone.height} pixels
                 </p>
                 <p>Total Pixels: {hoveredZone.totalPixels}</p>
-                <p>
-                  Position: ({hoveredZone.x}, {hoveredZone.y})
-                </p>
+                <p>Position: ({hoveredZone.x}, {hoveredZone.y}) </p>
                 <p>Status: {hoveredZone.status.toUpperCase()}</p>
-                {hoveredZone.auctionEndDate && (
-                  <p>
-                    Ends:{" "}
-                    {new Date(hoveredZone.auctionEndDate).toLocaleString()}
-                  </p>
-                )}
+                 { hoveredZone.auctionEndDate && (
+                  <p> Ends:{" "} {new Date(hoveredZone.auctionEndDate).toLocaleString()} </p>
+                 )}
                 {hoveredZone.buyNowPrice && (
-                  <p>
-                    Buy Now Price: $
-                    {hoveredZone.buyNowPrice <= 1
-                      ? ""
-                      : hoveredZone.buyNowPrice.toFixed(2)}
-                  </p>
+                  <p> Buy Now Price: $ {hoveredZone.buyNowPrice <= 1 ? "" : hoveredZone.buyNowPrice.toFixed(2)} </p>
                 )}
                 {hoveredZone.pixelPrice && (
                   <p>Pixel Price: ${hoveredZone.pixelPrice.toFixed(2)}</p>
                 )}
+                </>
+              )}
                 {!hoveredZone.isEmpty && (
-                  <div>
-                    <p>Products:</p>
-                    <ul>
-                      {hoveredZone.products.map((product) => (
-                        <li key={product._id}>{product.title}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <div>
+                <img src={hoveredZone.products?.images[0]} alt={hoveredZone.products?.title}
+                  style={{ width: "100px", height: "70px", objectFit: "cover",  marginBottom: "10px" }}/>
+                   <a href={hoveredZone.products?.url}>{hoveredZone.products?.url}</a>
+                 </div>
                 )}
               </div>
             )}
 
-            {hoveredProduct && (
-              <div
-                className="product-tooltip"
-                style={{
-                  position: "fixed",
-                  left: `${hoverPosition.x + 20}px`,
-                  top: `${hoverPosition.y + 20}px`,
-                  background: "white",
-                  padding: "10px",
-                  borderRadius: "5px",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                  border: "2px solid #4a90e2",
-                  zIndex: 1000,
-                }}
-              >
-                <h5>{hoveredProduct.title}</h5>
-                <img
-                  src={hoveredProduct.images[0]}
-                  alt={hoveredProduct.title}
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    objectFit: "cover",
-                    marginBottom: "10px",
-                  }}
-                />
-                {hoveredProduct.purchaseType && (
-                  <p>
-                    Purchase Type:{" "}
-                    {hoveredProduct.purchaseType === "bid"
-                      ? "Bidding"
-                      : "One-time Purchase"}
-                  </p>
-                )}
-                {hoveredProduct.price && (
-                  <p>Price: ${hoveredProduct.price.toFixed(2)}</p>
-                )}
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => router.push(`/product/${hoveredProduct._id}`)}
-                >
-                  View Product
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Auction Zone Creation Modal */}
       {showAuctionModal && currentSelection && (
         <div
           className="modal show"
@@ -977,6 +826,7 @@ export default function AuctionCard({ config, products }: any) {
           </div>
         </div>
       )}
+      
     </div>
   );
 }

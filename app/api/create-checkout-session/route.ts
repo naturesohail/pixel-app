@@ -166,6 +166,8 @@ export async function POST(request: Request) {
       {
         $set: {
           "auctionZones.$[zone].status": "sold",
+          "auctionZones.$[zone].isEmpty": false,
+
         },
       },
       {
@@ -182,13 +184,13 @@ export async function POST(request: Request) {
     //   zoneId: targetZoneId,
     // });
     // In your POST handler, after creating the Stripe session:
-await dbSession.commitTransaction();
-return NextResponse.json({
-  id: session.id,
-  url: session.url, // Add this line to return the checkout URL
-  productId: product._id,
-  zoneId: targetZoneId,
-});
+    await dbSession.commitTransaction();
+    return NextResponse.json({
+      id: session.id,
+      url: session.url, // Add this line to return the checkout URL
+      productId: product._id,
+      zoneId: targetZoneId,
+    });
   } catch (error) {
     console.error("whole error:", error);
 

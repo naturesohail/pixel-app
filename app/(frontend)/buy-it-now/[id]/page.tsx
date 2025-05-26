@@ -78,8 +78,10 @@ export default function BuyItNowPage() {
     }
   }, []);
 
-console.log('activeAuctionZone :>> ', activeAuctionZone);
-  useEffect(() => {
+
+// console.log('activeAuctionZone :>> ', activeAuctionZone);
+ 
+useEffect(() => {
     if (userId === null && typeof window !== "undefined") return;
 
     const fetchPixelGrid = async () => {
@@ -109,9 +111,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
         setActiveAuctionZone(activeZone);
         
         if (userId) {
-          const bid = data.config.auctionZones
-            .find((z: any) => z.status)
-            ?.bids.find((bid: any) => bid.winStatus && bid.userId === userId);
+          const bid = data.config.auctionZones.find((z: any) => z.status)?.bids.find((bid: any) => bid.winStatus && bid.userId === userId);
           setBidData(bid);
         }
         
@@ -127,6 +127,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
     };
 
     fetchPixelGrid();
+
   }, [userId]);
 
   const incrementCount = () => {
@@ -188,9 +189,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
         totalPrice: totalPriceBid || totalPrice,
         productData: productForm,
         isOneTimePurchase: true,
-        targetZoneId: pixelGrid.config.auctionZones.find(
-          (z) => z.status === "active"
-        )?._id,
+        targetZoneId: zoneId
       }),
     });
 
