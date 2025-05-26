@@ -67,32 +67,11 @@ export async function POST(request: Request) {
       throw new Error("At least one product image is required");
     }
 
-    let allocatedPixels: number[] = [];
-
-    // for (const zone of config.auctionZones) {
-    //   if (!zone.pixelIndices) continue;
-
-    //   const availableInZone = zone.pixelIndices.filter((p:any) =>
-    //     !zone.productIds?.length // If zone is empty
-    //   );
-
-    //   if (availableInZone.length >= pixelCount) {
-    //     targetZoneId = zone._id ? zone._id.toString() : new Types.ObjectId().toString();
-    //     allocatedPixels = availableInZone.slice(0, pixelCount);
-    //     break;
-    //   }
-    // }
-
-    // if (!targetZoneId || allocatedPixels.length < pixelCount) {
-    //   throw new Error(`Not enough available pixels in any zone (requested: ${pixelCount})`);
-    // }
-
     // Create the product with zone reference
     const [product] = await Product.create(
       [
         {
           title: productData.title,
-          description: productData.description,
           price: totalPrice,
           images: processedImages,
           url: productData.url || "",
@@ -112,22 +91,6 @@ export async function POST(request: Request) {
     );
 
 
-    // Update the zone with this product
-    // const zoneIndex = config.auctionZones.findIndex((z:any) =>
-    //   z._id?.toString() === targetZoneId
-    // );
-
-    // if (zoneIndex >= 0) {
-    //   config.auctionZones[zoneIndex].productIds = [
-    //     ...(config.auctionZones[zoneIndex].productIds || []),
-    //     product._id
-    //   ];
-    //   config.auctionZones[zoneIndex].pixelIndices =
-    //     config.auctionZones[zoneIndex].pixelIndices.filter((p:any) => !allocatedPixels.includes(p));
-    //   config.auctionZones[zoneIndex].isEmpty =
-    //     config.auctionZones[zoneIndex].pixelIndices.length > 0;
-    // }
-
     // Update available pixels count
     config.availablePixels = Math.max(0, config.availablePixels - pixelCount);
     await config.save({ session: dbSession });
@@ -141,7 +104,6 @@ export async function POST(request: Request) {
             currency: "usd",
             product_data: {
               name: `${productData.title} (${pixelCount} pixels)`,
-              description: productData.description.substring(0, 100),
             },
             unit_amount: Math.round(totalPrice * 100),
           },
@@ -177,12 +139,7 @@ export async function POST(request: Request) {
         ],
       }
     );
-    // await dbSession.commitTransaction();
-    // return NextResponse.json({
-    //   id: session.id,
-    //   productId: product._id,
-    //   zoneId: targetZoneId,
-    // });
+ 
     // In your POST handler, after creating the Stripe session:
     await dbSession.commitTransaction();
     return NextResponse.json({

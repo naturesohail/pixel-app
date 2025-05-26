@@ -26,14 +26,13 @@ export default function AuctionCard({ config, products }: any) {
   const [pixelPrice, setPixelPrice] = useState<number>(0);
   const [buyNowPrice, setBuyNowPrice] = useState<number>(0);
 
-  const isAdmin = !!user;
+  const isAuthUser = !!user;
   const pixelSize = 12;
   const cols = 1000;
   const rows = 1000;
 
   const productMap = useRef<Record<number, Product>>({});
   console.log("auctionZones :>> ", auctionZones);
-  // Initialize auction zones from config
   useEffect(() => {
     if (config?.auctionZones) {
       const now = new Date();
@@ -158,7 +157,7 @@ export default function AuctionCard({ config, products }: any) {
   useEffect(() => {
     auctionZones.forEach((zone) => {
       if (zone?.products?.images) {
-        const img = zone?.products?.images[0] || null; // Use a placeholder if no image is available
+        const img = zone?.products?.images[0] || null;
         if (!imageCache.current[zone._id]) {
           laodImage(img, zone._id);
         }
@@ -239,10 +238,10 @@ export default function AuctionCard({ config, products }: any) {
         zone.status === "sold"
           ? "#00c800"
           : zone?.status === "expired"
-          ? "#c80000"
-          : zone?.bids?.length
-          ? "rgb(255, 111, 0)"
-          : "#0064ff";
+            ? "#c80000"
+            : zone?.bids?.length
+              ? "rgb(255, 111, 0)"
+              : "#0064ff";
       ctx.lineWidth = 2;
       ctx.strokeRect(zoneX, zoneY, zoneWidth, zoneHeight);
 
@@ -252,20 +251,21 @@ export default function AuctionCard({ config, products }: any) {
           zone.status === "sold"
             ? "#004d00"
             : zone.status === "expired"
-            ? "#800000"
-            : zone?.bids?.length
-            ? "rgb(255, 111, 0)"
-            : "#003366";
+              ? "#800000"
+              : zone?.bids?.length
+                ? "rgb(255, 111, 0)"
+                : "#003366";
         ctx.font = "bold 12px Arial";
         ctx.textAlign = "center";
 
-        ctx.fillText(
-          `${zone.width}x${zone.height} (${zone.totalPixels}px)`,
-          zoneX + zoneWidth / 2,
-          zoneY + zoneHeight / 2
-        );
 
-        if (zone.auctionEndDate) {
+
+        if (zone.auctionEndDate && zone.isEmpty) {
+          ctx.fillText(
+            `${zone.width}x${zone.height} (${zone.totalPixels}px)`,
+            zoneX + zoneWidth / 2,
+            zoneY + zoneHeight / 2
+          );
           const endDate = new Date(zone.auctionEndDate);
           const daysLeft = Math.ceil(
             (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
@@ -279,7 +279,7 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
 
-    if (isAdmin && currentSelection) {
+    if (isAuthUser && currentSelection) {
       ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
       ctx.fillRect(
         currentSelection.x * pixelSize,
@@ -350,10 +350,10 @@ export default function AuctionCard({ config, products }: any) {
         }
       }
     });
-  }, [products, renderedProducts, auctionZones, isAdmin, currentSelection]);
+  }, [products, renderedProducts, auctionZones, isAuthUser, currentSelection]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isAdmin) return;
+    if (!isAuthUser) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -389,7 +389,7 @@ export default function AuctionCard({ config, products }: any) {
 
     setHoverPosition({ x: e.clientX, y: e.clientY });
 
-    if (isAdmin && isDragging && dragStart) {
+    if (isAuthUser && isDragging && dragStart) {
       const x = Math.floor(mouseX / pixelSize);
       const y = Math.floor(mouseY / pixelSize);
       const width = Math.max(1, Math.abs(x - dragStart.x) + 1);
@@ -440,7 +440,7 @@ export default function AuctionCard({ config, products }: any) {
   };
 
   const handleMouseUp = () => {
-    if (!isAdmin || !isDragging || !currentSelection) {
+    if (!isAuthUser || !isDragging || !currentSelection) {
       setIsDragging(false);
       return;
     }
@@ -469,118 +469,122 @@ export default function AuctionCard({ config, products }: any) {
   };
   console.log("error :>> ", error);
 
- const confirmAuctionZone = () => {
-  console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
-  if (!currentSelection) {
-    setError("No area selected to add");
-    return null;
-  }
-
-  const { x, y, width, height, isEmpty, products } = currentSelection;
-
-  if (isAreaOverlapping(auctionZones)) {
-    setError("This area overlaps with an existing auction zone");
-    return null;
-  }
-
-  if (!isEmpty && products.length === 0) {
-    setError("This area contains products but could not identify them");
-    return null;
-  }
-
-  const auctionEndDate = new Date(
-    Date.now() + auctionDuration * 24 * 60 * 60 * 1000
-  ).toISOString();
-  const totalPixels = width * height;
-  const basePrice = totalPixels * pixelPrice;
-
-  const newZone: AuctionZone = {
-    id: Date.now().toString(),
-    x,
-    y,
-    width,
-    height,
-    products,
-    isEmpty,
-    status: "active",
-    auctionEndDate,
-    totalPixels,
-    pixelPrice,
-    buyNowPrice,
-  };
-
-  setAuctionZones([...auctionZones, newZone]);
-  setError(null);
-  drawCanvas();
-
-  return newZone; // only return the new zone
-};
-
-  const saveAuctionZones = async () => {
-  const newZone = confirmAuctionZone();
-  if (!newZone) return;
-
-  setIsSaving(true);
-  try {
-    const response = await fetch("/api/auction-zones", {
-      method: "POST", // Use POST for creating a single new zone
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        x: newZone.x,
-        y: newZone.y,
-        width: newZone.width,
-        height: newZone.height,
-        productIds: newZone.products.map((p: any) => p._id),
-        isEmpty: newZone.isEmpty,
-        status: newZone.status,
-        auctionEndDate: newZone.auctionEndDate,
-        buyNowPrice: newZone.buyNowPrice,
-        totalPixels: newZone.totalPixels,
-        pixelPrice: newZone.pixelPrice,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 409) {
-        throw new Error("Cannot add new zones while another zone is active");
-      }
-      throw new Error("Failed to save auction zone");
+  const confirmAuctionZone = () => {
+    console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
+    if (!currentSelection) {
+      setError("No area selected to add");
+      return null;
     }
 
-    const data = await response.json();
+    const { x, y, width, height, isEmpty, products } = currentSelection;
 
-    // Optionally replace the temp ID with the real one from server
-    setAuctionZones((prev) =>
-      prev.map((zone) =>
-        zone.id === newZone.id ? { ...zone, id: data._id } : zone
-      )
-    );
+    if (isAreaOverlapping(auctionZones)) {
+      setError("This area overlaps with an existing auction zone");
+      return null;
+    }
 
+    if (!isEmpty && products.length === 0) {
+      setError("This area contains products but could not identify them");
+      return null;
+    }
+
+    const auctionEndDate = new Date(
+      Date.now() + auctionDuration * 24 * 60 * 60 * 1000
+    ).toISOString();
+    const totalPixels = width * height;
+    const basePrice = totalPixels * pixelPrice;
+
+    const newZone: AuctionZone = {
+      id: Date.now().toString(),
+      x,
+      y,
+      width,
+      height,
+      products,
+      isEmpty,
+      status: "active",
+      auctionEndDate,
+      totalPixels,
+      pixelPrice,
+      buyNowPrice,
+    };
+
+    setAuctionZones([...auctionZones, newZone]);
     setError(null);
-    alert("Auction zone saved successfully!");
-    setShowAuctionModal(false);
-  } catch (err: any) {
-    setError(err.message || "Failed to save auction zone");
-  } finally {
-    setIsSaving(false);
-  }
-};
+    drawCanvas();
+
+    return newZone; // only return the new zone
+  };
+
+  const saveAuctionZones = async () => {
+    const newZone = confirmAuctionZone();
+    if (!newZone) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/auction-zones", {
+        method: "POST", // Use POST for creating a single new zone
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          x: newZone.x,
+          y: newZone.y,
+          width: newZone.width,
+          height: newZone.height,
+          productIds: newZone.products.map((p: any) => p._id),
+          isEmpty: newZone.isEmpty,
+          status: newZone.status,
+          auctionEndDate: newZone.auctionEndDate,
+          buyNowPrice: newZone.buyNowPrice,
+          totalPixels: newZone.totalPixels,
+          pixelPrice: newZone.pixelPrice,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error("Cannot add new zones while another zone is active");
+        }
+        throw new Error("Failed to save auction zone");
+      }
+
+      const data = await response.json();
+
+      // Optionally replace the temp ID with the real one from server
+      setAuctionZones((prev) =>
+        prev.map((zone) =>
+          zone.id === newZone.id ? { ...zone, id: data._id } : zone
+        )
+      );
+
+      setError(null);
+      alert("Auction zone saved successfully!");
+      setShowAuctionModal(false);
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message || "Failed to save auction zone");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
 
-const handleClick = (e: React.MouseEvent) => {
-    
-      if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
-    // Open product URL in new tab
-    window.open(hoveredZone.products.url, "_blank");
-    return;
-  }
+  const handleClick = (e: React.MouseEvent) => {
 
-      else if (hoveredZone) {
-       if(!user) {
-        router.push(`/login`);
-       } else{
+    if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
+      // Open product URL in new tab
+      window.open(hoveredZone.products.url, "_blank");
+      return;
+    }
+
+    else if (hoveredZone) {
+      if (!user) {
+        const confirmed = window.confirm("You need to log in first to place a bid or purchase this zone.");
+        if (confirmed) {
+          router.push("/login");
+        }
+      } else {
         router.push(`/auctions/${hoveredZone.id}`);
       }
     }
@@ -594,33 +598,33 @@ const handleClick = (e: React.MouseEvent) => {
     const y = Math.floor(mouseY / pixelSize);
 
     const product = productMap.current[y * cols + x];
-   
+
     if (product) {
       router.push(`/product/${product._id}`);
       return;
     }
-}
-  
+  }
+
   useEffect(() => {
     drawCanvas();
   }, [drawCanvas]);
 
   return (
-    
+
     <div className="col-lg-12">
       <div className="card million-dollar-style">
         <div className="card-body">
-        
+
           <div className="position-relative">
             <div ref={containerRef} style={{ overflowY: "auto", maxHeight: "70vh" }}>
-              <div style={{width: `${cols * pixelSize}px`,height: `${rows * pixelSize}px`}}>
+              <div style={{ width: `${cols * pixelSize}px`, height: `${rows * pixelSize}px` }}>
                 <canvas
                   ref={canvasRef}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onClick={handleClick}
-                  style={{cursor: isAdmin? "pointer" : hoveredProduct || hoveredZone ? "pointer" : "default", backgroundColor: "#fff" }}
+                  style={{ cursor: isAuthUser ? "pointer" : hoveredProduct || hoveredZone ? "pointer" : "default", backgroundColor: "#fff" }}
                 />
               </div>
             </div>
@@ -636,44 +640,43 @@ const handleClick = (e: React.MouseEvent) => {
                   padding: "10px",
                   borderRadius: "5px",
                   boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                  border: `2px solid ${
-                    hoveredZone.status === "sold"
-                      ? "#00c800"
-                      : hoveredZone.status === "expired"
+                  border: `2px solid ${hoveredZone.status === "sold"
+                    ? "#00c800"
+                    : hoveredZone.status === "expired"
                       ? "#c80000"
                       : "#0064ff"
-                  }`,
-                    cursor: 'pointer !important',
+                    }`,
+                  cursor: 'pointer !important',
                   zIndex: 1000,
                 }}>
 
-                <h5>{hoveredZone.isEmpty? "Empty Auction Zone" : ""}</h5>
-              
+                <h5>{hoveredZone.isEmpty ? "Empty Auction Zone" : ""}</h5>
+
                 {hoveredZone.isEmpty && (
-                <>
-                <p>
-                  {}Size: {hoveredZone.width}x{hoveredZone.height} pixels
-                </p>
-                <p>Total Pixels: {hoveredZone.totalPixels}</p>
-                <p>Position: ({hoveredZone.x}, {hoveredZone.y}) </p>
-                <p>Status: {hoveredZone.status.toUpperCase()}</p>
-                 { hoveredZone.auctionEndDate && (
-                  <p> Ends:{" "} {new Date(hoveredZone.auctionEndDate).toLocaleString()} </p>
-                 )}
-                {hoveredZone.buyNowPrice && (
-                  <p> Buy Now Price: $ {hoveredZone.buyNowPrice <= 1 ? "" : hoveredZone.buyNowPrice.toFixed(2)} </p>
+                  <>
+                    <p>
+                      { }Size: {hoveredZone.width}x{hoveredZone.height} pixels
+                    </p>
+                    <p>Total Pixels: {hoveredZone.totalPixels}</p>
+                    <p>Position: ({hoveredZone.x}, {hoveredZone.y}) </p>
+                    <p>Status: {hoveredZone.status.toUpperCase()}</p>
+                    {hoveredZone.auctionEndDate && (
+                      <p> Ends:{" "} {new Date(hoveredZone.auctionEndDate).toLocaleString()} </p>
+                    )}
+                    {hoveredZone.buyNowPrice && (
+                      <p> Buy Now Price: $ {hoveredZone.buyNowPrice <= 1 ? "" : hoveredZone.buyNowPrice.toFixed(2)} </p>
+                    )}
+                    {hoveredZone.pixelPrice && (
+                      <p>Pixel Price: ${hoveredZone.pixelPrice.toFixed(2)}</p>
+                    )}
+                  </>
                 )}
-                {hoveredZone.pixelPrice && (
-                  <p>Pixel Price: ${hoveredZone.pixelPrice.toFixed(2)}</p>
-                )}
-                </>
-              )}
                 {!hoveredZone.isEmpty && (
-                <div>
-                <img src={hoveredZone.products?.images[0]} alt={hoveredZone.products?.title}
-                  style={{ width: "100px", height: "70px", objectFit: "cover",  marginBottom: "10px" }}/>
-                   <a href={hoveredZone.products?.url}>{hoveredZone.products?.url}</a>
-                 </div>
+                  <div>
+                    <img src={hoveredZone.products?.images[0]} alt={hoveredZone.products?.title}
+                      style={{ width: "100px", height: "70px", objectFit: "cover", marginBottom: "10px" }} />
+                    <a href={hoveredZone.products?.url}>{hoveredZone.products?.url}</a>
+                  </div>
                 )}
               </div>
             )}
@@ -703,7 +706,7 @@ const handleClick = (e: React.MouseEvent) => {
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() => {}}
+                  onClick={() => { }}
                   aria-label="Close"
                 />
               </div>
@@ -733,41 +736,46 @@ const handleClick = (e: React.MouseEvent) => {
                     step="0.01"
                     value={pixelPrice <= 0 ? "" : pixelPrice}
                     onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
+                    placeholder="Pixel Price"
                   />
                 </div>{" "}
                 <div className="mb-3">
-                  <label className="form-label">Direct Buy Price ($)</label>
+                  <label className="form-label">Instant Buy Price ($)</label>
                   <input
                     type="number"
                     className="form-control"
-                    min="0.01"
-                    step="0.01"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="Instant Buy Price"
                     value={buyNowPrice <= 0 ? "" : buyNowPrice}
                     onChange={(e) => setBuyNowPrice(parseFloat(e.target.value))}
+
                   />
                 </div>
                 <div className="alert alert-info">
                   <p>
                     <strong>Zone Details:</strong>
                   </p>
-                  <p>
-                    Size: {currentSelection.width}x{currentSelection.height}{" "}
-                    pixels
+                  <p> Size: {currentSelection.width}x{currentSelection.height}{" "} Pixels </p>
+
+                  <p> Position: ({currentSelection.x}, {currentSelection.y}) </p>
+                  <p> Total Pixels:{" "} {currentSelection.width * currentSelection.height} </p>
+
+                  <p> Base Price: ${(currentSelection.width *
+                    currentSelection.height *
+                    pixelPrice
+                  ).toFixed(2)}
                   </p>
+
                   <p>
-                    Total Pixels:{" "}
-                    {currentSelection.width * currentSelection.height}
-                  </p>
-                  <p>
-                    Position: ({currentSelection.x}, {currentSelection.y})
-                  </p>
-                  <p>
-                    Base Price: $
+                    Instant Buy Price: $
                     {(
                       currentSelection.width *
                       currentSelection.height *
-                      pixelPrice
+                      buyNowPrice
                     ).toFixed(2)}
+
+
                   </p>
                   {!currentSelection.isEmpty && (
                     <div>
@@ -790,7 +798,7 @@ const handleClick = (e: React.MouseEvent) => {
                       </p>
                     </div>
                   )}
-                 
+
                 </div>
               </div>
               <div className="modal-footer">
@@ -798,12 +806,12 @@ const handleClick = (e: React.MouseEvent) => {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => {
-                    setAuctionZones((prev:any)=>{
-                       return prev.filter((item:any)=>{
-                           setShowAuctionModal(false);
+                    setAuctionZones((prev: any) => {
+                      return prev.filter((item: any) => {
+                        setShowAuctionModal(false);
 
-                         return item.id!=currentSelection.id
-                       })
+                        return item.id != currentSelection.id
+                      })
                     });
                     setCurrentSelection(null);
                     setError(null);
@@ -826,7 +834,7 @@ const handleClick = (e: React.MouseEvent) => {
           </div>
         </div>
       )}
-      
+
     </div>
   );
 }

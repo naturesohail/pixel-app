@@ -13,21 +13,18 @@ interface IProduct extends Document {
   status: 'pending' | 'active' | 'expired' | 'sold';
   purchaseType: 'one-time' | 'bid';
   expiryDate: Date;
-  zoneId?: Types.ObjectId;  // Added reference to auction zone
+  zoneId?: Types.ObjectId; 
   createdAt: Date;
   updatedAt: Date;
 }
 
 const ProductSchema = new Schema<IProduct>({
   title: { type: String, required: true },
-  description: { type: String, required: true },
   price: { type: Number, required: true },
   images: { type: [String], required: true },
   url: { type: String, default: '' },
   owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  // pixelCount: { type: Number, required: true },
-  // pixelIndices: { type: [Number], required: true },
-  // pixelIndex: { type: Number, required: true },
+
   zoneId: { type: Schema.Types.ObjectId, ref: 'PixelConfig.auctionZones' }, // Reference to zone
   status: {
     type: String,

@@ -217,51 +217,7 @@ useEffect(() => {
   }
  };
 
-  // const handleBuyNow = async () => {
-  //   if (!user || !pixelGrid) {
-  //     showLoginAlert();
-  //     return;
-  //   }
-
-  //   setIsProcessing(true);
-  //   try {
-  //     const response = await fetch("/api/create-checkout-session", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({
-  //         userId: user._id,
-  //         pixelCount,
-  //         totalPrice: totalPriceBid || totalPrice,
-  //         productData: productForm,
-  //         isOneTimePurchase: true,
-  //         targetZoneId: pixelGrid.config.auctionZones.find(
-  //           (z) => z.status === "active"
-  //         )?._id,
-  //       }),
-  //     });
-
-  //     const session = await response.json();
-  //     if (session.error) {
-  //       Swal.fire({
-  //         title: "Checkout Failed",
-  //         text:
-  //           session.error instanceof Error
-  //             ? session.error
-  //             : "Something went wrong",
-  //         icon: "error",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.log("Checkout error:", error);
-  //     Swal.fire({
-  //       title: "Checkout Failed",
-  //       text: error instanceof Error ? error.message : "Something went wrong",
-  //       icon: "error",
-  //     });
-  //   } finally {
-  //     setIsProcessing(false);
-  //   }
-  // };
+ 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -356,16 +312,7 @@ useEffect(() => {
                 <div className="mb-4">
                   <label className="form-label">Number of pixels:</label>
                   <div className="d-flex align-items-center">
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={decrementCount}
-                      disabled={
-                        pixelCount <=
-                        (pixelGrid?.config.minimumOrderQuantity || 1)
-                      }
-                    >
-                      -
-                    </button>
+                   
                     <div
                       className="mx-2"
                       style={{ width: "80px", textAlign: "center" }}
@@ -376,27 +323,15 @@ useEffect(() => {
                         ].totalPixels
                       }
                     </div>
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={incrementCount}
-                      disabled={
-                        !pixelGrid ||
-                        pixelCount >= pixelGrid.config.availablePixels
-                      }
-                    >
-                      +
-                    </button>
+                  
                   </div>
-                  <small className="text-muted">
-                    Min: {pixelGrid?.config.minimumOrderQuantity || 1}, Max:{" "}
-                    {pixelGrid?.config.availablePixels || 0} available
-                  </small>
+                 
                 </div>
 
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
                     <span>Price per pixel:</span>
-                    <strong>${activeAuctionZone?.pixelPrice}</strong>
+                    <strong>${activeAuctionZone?.buyNowPrice}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
                     <span>Total Price:</span>
@@ -536,21 +471,7 @@ useEffect(() => {
                     />
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Description*</label>
-                    <textarea
-                      className="form-control"
-                      rows={3}
-                      value={productForm.description}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          description: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
+                 
                 </form>
               </div>
               <div className="modal-footer">
@@ -567,8 +488,7 @@ useEffect(() => {
                   onClick={handleBuyNow}
                   disabled={
                     isProcessing ||
-                    !productForm.title ||
-                    !productForm.description
+                    !productForm.title 
                   }
                 >
                   {isProcessing ? "Processing..." : "Confirm Purchase"}

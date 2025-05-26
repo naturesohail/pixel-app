@@ -35,9 +35,9 @@ export async function POST(request: Request) {
     const { userId, pixelCount, bidAmount, product } = await request.json();
 
     // Validate inputs
-    if (!Types.ObjectId.isValid(userId) || !pixelCount || !product) {
-      throw new Error('Missing required fields');
-    }
+    // if (!Types.ObjectId.isValid(userId) || !pixelCount || !product) {
+    //   throw new Error('Missing required fields');
+    // }
 
     // Get pixel config with active bid indices
     const config = await PixelConfig.findOne().sort({ createdAt: -1 }).session(dbSession);
