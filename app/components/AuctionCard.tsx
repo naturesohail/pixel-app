@@ -478,16 +478,6 @@ export default function AuctionCard({ config, products }: any) {
 
     const { x, y, width, height, isEmpty, products } = currentSelection;
 
-    if (isAreaOverlapping(auctionZones)) {
-      setError("This area overlaps with an existing auction zone");
-      return null;
-    }
-
-    if (!isEmpty && products.length === 0) {
-      setError("This area contains products but could not identify them");
-      return null;
-    }
-
     const auctionEndDate = new Date(
       Date.now() + auctionDuration * 24 * 60 * 60 * 1000
     ).toISOString();
@@ -517,6 +507,11 @@ export default function AuctionCard({ config, products }: any) {
   };
 
   const saveAuctionZones = async () => {
+    if (isAreaOverlapping(auctionZones)) {
+      alert("This area overlaps with an existing Zone");
+      return null;
+    }
+    
     const newZone = confirmAuctionZone();
     if (!newZone) return;
 
