@@ -95,6 +95,8 @@ export async function POST(request: Request) {
     config.availablePixels = Math.max(0, config.availablePixels - pixelCount);
     await config.save({ session: dbSession });
 
+
+    
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
