@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (!config) throw new Error('Pixel config not found');
 
     const availablePixels = config.auctionZones.flatMap((zone: any) => zone.pixelIndices || []);
-    const usedPixels = (await Product.find({ status: 'won' }))
+    const usedPixels = (await Product.find({ status: 'active' }))
       .flatMap(p => p.pixelIndices || []);
 
     const allocatablePixels = availablePixels.filter((p: number) => !usedPixels.includes(p));
