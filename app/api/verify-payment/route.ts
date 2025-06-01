@@ -226,7 +226,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true, 
       productId: product._id,
-      transactionId: transaction?._id
+      // transactionId: transaction?._id
     });
   } catch (error) {
     if (dbSession) await dbSession.abortTransaction();
