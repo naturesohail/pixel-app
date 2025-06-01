@@ -120,29 +120,29 @@ export default function Header() {
                     <div className="flex justify-center">
                       <div className="flex items-center">
                         <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${'bg-white text-blue-400'} font-bold`}>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${'bg-white text-blue-400'} font-bold`}>
                             1
                           </div>
                           <span className="text-white font-medium mt-1">Login</span>
                         </div>
                         <svg width="64" height="16" viewBox="0 0 64 16" fill="none" className="opacity-50">
-                          <line x1="0" y1="8" x2="56" y2="8" stroke="white" strokeWidth="2" />
-                          <path d="M56 8L48 4V12L56 8Z" fill="white" />
+                          <line x1="0" y1="8" x2="56" y2="8" stroke="black" strokeWidth="2" />
+                          <path d="M56 8L48 4V12L56 8Z" fill="black" />
                         </svg>      
                         
-                                  <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStepIndex >= 1 ? 'bg-yellow-400 text-white' : 'bg-white text-blue-600'} font-bold`}>
+                            <div className="flex flex-col items-center">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${currentStepIndex >= 1 ? 'bg-yellow-400 text-white' : 'bg-white text-blue-600'} font-bold`}>
                             2
                           </div>
                           <span className="text-white font-medium mt-1">Bid/Buy Now</span>
                         </div>
                         {/* <div className="h-1 w-16 bg-white opacity-50"></div> */}
                         <svg width="64" height="16" viewBox="0 0 64 16" fill="none" className="opacity-50">
-                          <line x1="0" y1="8" x2="56" y2="8" stroke="white" strokeWidth="2" />
-                          <path d="M56 8L48 4V12L56 8Z" fill="white" />
+                          <line x1="0" y1="8" x2="56" y2="8" stroke="black" strokeWidth="2" />
+                          <path d="M56 8L48 4V12L56 8Z" fill="black" />
                         </svg>
                         <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStepIndex >= 2 ? 'bg-yellow-400 text-white' : 'bg-white text-blue-600'} font-bold`}>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${currentStepIndex >= 2 ? 'bg-yellow-400 text-white' : 'bg-white text-blue-600'} font-bold`}>
                             3
                           </div>
                           <span className="text-white font-medium mt-1">Upload Pixel</span>

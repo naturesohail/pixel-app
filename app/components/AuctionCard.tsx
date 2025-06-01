@@ -64,6 +64,7 @@ export default function AuctionCard({ config, products }: any) {
       drawCanvas();
     }
   }, [config, products]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -95,6 +96,7 @@ export default function AuctionCard({ config, products }: any) {
     return () => clearInterval(interval);
   }, [auctionZones]);
 
+const minBuyNowPrice = config?.oneTimePrice ?? 20;
 
   const isAreaOverlapping = (zones: AuctionZone[]) => {
     for (let i = 0; i < zones.length; i++) {
@@ -166,6 +168,8 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
   }, [auctionZones]);
+
+  
   const laodImage = (img: string, aId: string) => {
     const dummyImg = new Image();
     dummyImg.src = img;
@@ -738,24 +742,25 @@ export default function AuctionCard({ config, products }: any) {
                     placeholder="Pixel Price"
                   />
                 </div>{" "}
-                        <div className="mb-3">
+                
+                 <div className="mb-3">
                   <label className="form-label">Instant Buy Prices ($)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    min={config?.oneTimePrice || 20}
-                    step="1"
-                    placeholder={`Minimum $${config?.oneTimePrice || 20}`}
-                    value={buyNowPrice}
-                    onChange={(e) => {
-                      const newValue = parseFloat(e.target.value);
-                      const minPrice = config?.oneTimePrice || 20;
-                      setBuyNowPrice(isNaN(newValue) ? minPrice : Math.max(minPrice, newValue));
-                    }}
-                  />
-                  <small className="text-muted">
-                    Minimum price: ${config?.oneTimePrice || 20}
-                  </small>
+                 <input
+                  type="number"
+                  className="form-control"
+                  step="1"
+                  min={config?.oneTimePrice ?? ''}
+                  placeholder={config?.oneTimePrice ? `Minimum $${config.oneTimePrice}` : 'Loading...'}
+                  value={buyNowPrice}
+                  onChange={(e) => {
+                    const newValue = parseFloat(e.target.value);
+                    setBuyNowPrice(isNaN(newValue) ? minBuyNowPrice : Math.max(minBuyNowPrice, newValue));
+                  }}
+                />
+                <small className="text-muted">
+                  Minimum price: ${minBuyNowPrice}
+                </small>
+
                 </div>
 
                 {/* In the display section */}
@@ -848,8 +853,7 @@ export default function AuctionCard({ config, products }: any) {
           </div>
         </div>
         </div>
-  )
-}
+     )}
 
     </div >
   );
