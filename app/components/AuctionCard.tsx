@@ -636,7 +636,7 @@ export default function AuctionCard({ config, products }: any) {
     }
   };
   const handleClick = (e: React.MouseEvent) => {
-    if (isAdmin) return;
+    if (user?.isAdmin) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
