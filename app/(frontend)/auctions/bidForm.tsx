@@ -32,7 +32,7 @@ export default function BidForm({
 
   //   if (response.ok) {
   //     console.log("✅ Your bids:", data.bids);
-  //   } else {
+//   } else {
   //     console.error("❌ Error fetching your bids:", data.error);
   //   }
   // };
@@ -71,7 +71,7 @@ export default function BidForm({
     }
   };
 
-  console.log("activeAuctionZone :>> ", activeAuctionZone);
+  // console.log("activeAuctionZone :>> ", activeAuctionZone);
   return (
     <div className="p-6 max-w-lg mx-auto bg-white shadow-md rounded-md">
       <h2 className="text-xl font-semibold mb-4">Place a Bid</h2>

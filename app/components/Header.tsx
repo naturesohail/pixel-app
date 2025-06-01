@@ -12,21 +12,19 @@ type TourStep = {
 };
 
 export default function Header() {
+
   const { isLoggedIn, user, logout, isLoading } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const [showTour, setShowTour] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
-
   const loggedInStatusRef = useRef<HTMLSpanElement>(null);
   const loginLinkRef = useRef<HTMLAnchorElement>(null);
   const bidBuyLinkRef = useRef<HTMLAnchorElement>(null);
   const uploadPixelLinkRef = useRef<HTMLAnchorElement>(null);
   const auctionsLinkRef = useRef<HTMLAnchorElement>(null);
   const userDropdownButtonRef = useRef<HTMLButtonElement>(null);
-
   const refMap = useRef<Record<string, React.RefObject<HTMLElement | null>>>({});
 
   useEffect(() => {
@@ -116,34 +114,44 @@ export default function Header() {
               </Link>
 
               <ul className="nav flex items-center gap-6">
-                {isLoggedIn ? (
-                  <>
-                    <li>
-                      <span ref={loggedInStatusRef} className="flex items-center space-x-1 text-green-600 font-medium">
-                        <FaCheckCircle size={20} />
-                        <span>Logged In</span>
-                      </span>
-                    </li>
-                  </>
-                ) : (
-                  <>
-                    <li>
-                      <Link ref={loginLinkRef} href="/login" className="hover:text-blue-600 text-gray-800 font-medium">
-                        Login
-                      </Link>
-                    </li>
-                    <li>
-                      <Link ref={bidBuyLinkRef} href="/bid-now" className="hover:text-blue-600 text-gray-800 font-medium">
-                        Bid now / Buy Now
-                      </Link>
-                    </li>
-                    <li>
-                      <Link ref={uploadPixelLinkRef} href="/upload-pixel-info" className="hover:text-blue-600 text-gray-800 font-medium">
-                        Upload Pixel Info
-                      </Link>
-                    </li>
-                  </>
-                )}
+                <div className="bg-gradienb from-blue-600 to-grey-600 py-1">
+                  <div className="container mx-auto">
+                    
+                    <div className="flex justify-center">
+                      <div className="flex items-center">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${'bg-white text-blue-400'} font-bold`}>
+                            1
+                          </div>
+                          <span className="text-white font-medium mt-1">Login</span>
+                        </div>
+                        <svg width="64" height="16" viewBox="0 0 64 16" fill="none" className="opacity-50">
+                          <line x1="0" y1="8" x2="56" y2="8" stroke="white" strokeWidth="2" />
+                          <path d="M56 8L48 4V12L56 8Z" fill="white" />
+                        </svg>      
+                        
+                                  <div className="flex flex-col items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStepIndex >= 1 ? 'bg-yellow-400 text-white' : 'bg-white text-blue-600'} font-bold`}>
+                            2
+                          </div>
+                          <span className="text-white font-medium mt-1">Bid/Buy Now</span>
+                        </div>
+                        {/* <div className="h-1 w-16 bg-white opacity-50"></div> */}
+                        <svg width="64" height="16" viewBox="0 0 64 16" fill="none" className="opacity-50">
+                          <line x1="0" y1="8" x2="56" y2="8" stroke="white" strokeWidth="2" />
+                          <path d="M56 8L48 4V12L56 8Z" fill="white" />
+                        </svg>
+                        <div className="flex flex-col items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStepIndex >= 2 ? 'bg-yellow-400 text-white' : 'bg-white text-blue-600'} font-bold`}>
+                            3
+                          </div>
+                          <span className="text-white font-medium mt-1">Upload Pixel</span>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
 
                 <li>
                   <Link ref={auctionsLinkRef} href="/auctions" className="hover:text-blue-600 text-gray-800 font-medium">
@@ -173,11 +181,11 @@ export default function Header() {
                         className="absolute right-0 mt-2 w-40 bg-gray-100 border border-gray-300 rounded-md shadow-lg z-10"
                       >
                         <Link
-                          href="/bids"
+                          href="/transactions"
                           className="block px-4 py-2 hover:bg-gray-200 text-gray-800"
                           onClick={() => setDropdownOpen(false)}
                         >
-                          Bids
+                          Transactions 
                         </Link>
                         <button
                           onClick={() => {
@@ -221,6 +229,7 @@ export default function Header() {
           }}
         ></div>
       )}
+
     </header>
   );
 }
