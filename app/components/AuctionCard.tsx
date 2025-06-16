@@ -24,7 +24,7 @@ export default function AuctionCard({ config, products }: any) {
   const [auctionDuration, setAuctionDuration] = useState<number>(3);
   const [showAuctionModal, setShowAuctionModal] = useState(false);
   const [pixelPrice, setPixelPrice] = useState<number>(0);
-  const [buyNowPrice, setBuyNowPrice] = useState<number>(0);
+  const [buyNowPrice, setBuyNowPrice] = useState<number>(config?.oneTimePrice);
 
   const isAuthUser = !!user;
   const pixelSize = 12;
@@ -35,6 +35,8 @@ export default function AuctionCard({ config, products }: any) {
   console.log("auctionZones :>> ", auctionZones);
   useEffect(() => {
     if (config?.auctionZones) {
+
+      setBuyNowPrice(config?.oneTimePrice)
       const now = new Date();
       const zones = config.auctionZones
         .map((zone: any) => ({
@@ -62,6 +64,7 @@ export default function AuctionCard({ config, products }: any) {
       drawCanvas();
     }
   }, [config, products]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -93,6 +96,7 @@ export default function AuctionCard({ config, products }: any) {
     return () => clearInterval(interval);
   }, [auctionZones]);
 
+const minBuyNowPrice = config?.oneTimePrice ?? 20;
 
   const isAreaOverlapping = (zones: AuctionZone[]) => {
     for (let i = 0; i < zones.length; i++) {
@@ -164,6 +168,8 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
   }, [auctionZones]);
+
+  
   const laodImage = (img: string, aId: string) => {
     const dummyImg = new Image();
     dummyImg.src = img;
@@ -511,7 +517,7 @@ export default function AuctionCard({ config, products }: any) {
       alert("This area overlaps with an existing Zone");
       return null;
     }
-    
+
     const newZone = confirmAuctionZone();
     if (!newZone) return;
 
@@ -580,7 +586,7 @@ export default function AuctionCard({ config, products }: any) {
           router.push("/login");
         }
       } else {
-            setShowAuctionModal(false);
+        setShowAuctionModal(false);
 
         router.push(`/auctions/${hoveredZone.id}`);
       }
@@ -736,102 +742,119 @@ export default function AuctionCard({ config, products }: any) {
                     placeholder="Pixel Price"
                   />
                 </div>{" "}
-                <div className="mb-3">
-                  <label className="form-label">Instant Buy Price ($)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    min="0.1"
-                    step="0.1"
-                    placeholder="Instant Buy Price"
-                    value={buyNowPrice <= 0 ? "" : buyNowPrice}
-                    onChange={(e) => setBuyNowPrice(parseFloat(e.target.value))}
+                
+                 <div className="mb-3">
+                  <label className="form-label">Instant Buy Prices ($)</label>
+                 <input
+                  type="number"
+                  className="form-control"
+                  step="1"
+                  min={config?.oneTimePrice ?? ''}
+                  placeholder={config?.oneTimePrice ? `Minimum $${config.oneTimePrice}` : 'Loading...'}
+                  value={buyNowPrice}
+                  onChange={(e) => {
+                    const newValue = parseFloat(e.target.value);
+                    setBuyNowPrice(isNaN(newValue) ? minBuyNowPrice : Math.max(minBuyNowPrice, newValue));
+                  }}
+                />
+                <small className="text-muted">
+                  Minimum price: ${minBuyNowPrice}
+                </small>
 
-                  />
                 </div>
-                <div className="alert alert-info">
-                  <p>
-                    <strong>Zone Details:</strong>
-                  </p>
-                  <p> Size: {currentSelection.width}x{currentSelection.height}{" "} Pixels </p>
 
-                  <p> Position: ({currentSelection.x}, {currentSelection.y}) </p>
-                  <p> Total Pixels:{" "} {currentSelection.width * currentSelection.height} </p>
-
-                  <p> Base Price: ${(currentSelection.width *
-                    currentSelection.height *
-                    pixelPrice
+                {/* In the display section */}
+                <p>
+                  Instant Buy Price: $
+                  {Math.max(
+                    config?.oneTimePrice || 20,
+                    currentSelection.width * currentSelection.height * buyNowPrice
                   ).toFixed(2)}
-                  </p>
+                </p>
 
-                  <p>
-                    Instant Buy Price: $
-                    {(
-                      currentSelection.width *
-                      currentSelection.height *
-                      buyNowPrice
-                    ).toFixed(2)}
+              <div className="alert alert-info">
+                <p>
+                  <strong>Zone Details:</strong>
+                </p>
+                <p> Size: {currentSelection.width}x{currentSelection.height}{" "} Pixels </p>
+
+                <p> Position: ({currentSelection.x}, {currentSelection.y}) </p>
+                <p> Total Pixels:{" "} {currentSelection.width * currentSelection.height} </p>
+
+                <p> Base Price: ${(currentSelection.width *
+                  currentSelection.height *
+                  pixelPrice
+                ).toFixed(2)}
+                </p>
+
+                <p>
+                  Instant Buy Price: $
+                  {(
+                    currentSelection.width *
+                    currentSelection.height *
+                    buyNowPrice
+                  ).toFixed(2)}
 
 
-                  </p>
-                  {!currentSelection.isEmpty && (
-                    <div>
-                      <p>
-                        Contains {currentSelection.products.length} product(s):
-                      </p>
-                      <ul>
-                        {currentSelection.products.map((product) => (
-                          <li key={product._id}>
-                            {product.title} - $
-                            {product.price?.toFixed(2) || "0.00"}
-                          </li>
-                        ))}
-                      </ul>
-                      <p>
-                        Total Products Value: $
-                        {currentSelection.products
-                          .reduce((sum, p) => sum + (p.price || 0), 0)
-                          .toFixed(2)}
-                      </p>
-                    </div>
-                  )}
+                </p>
+                {!currentSelection.isEmpty && (
+                  <div>
+                    <p>
+                      Contains {currentSelection.products.length} product(s):
+                    </p>
+                    <ul>
+                      {currentSelection.products.map((product) => (
+                        <li key={product._id}>
+                          {product.title} - $
+                          {product.price?.toFixed(2) || "0.00"}
+                        </li>
+                      ))}
+                    </ul>
+                    <p>
+                      Total Products Value: $
+                      {currentSelection.products
+                        .reduce((sum, p) => sum + (p.price || 0), 0)
+                        .toFixed(2)}
+                    </p>
+                  </div>
+                )}
 
-                </div>
               </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setAuctionZones((prev: any) => {
-                      return prev.filter((item: any) => {
-                        setShowAuctionModal(false);
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setAuctionZones((prev: any) => {
+                    return prev.filter((item: any) => {
+                      setShowAuctionModal(false);
 
-                        return item.id != currentSelection.id
-                      })
-                    });
-                    setCurrentSelection(null);
-                    setError(null);
-                    drawCanvas();
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    saveAuctionZones();
-                  }}
-                >
-                  Create Auction Zone
-                </button>
-              </div>
+                      return item.id != currentSelection.id
+                    })
+                  });
+                  setCurrentSelection(null);
+                  setError(null);
+                  drawCanvas();
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  saveAuctionZones();
+                }}
+              >
+                Create Auction Zone
+              </button>
             </div>
           </div>
         </div>
-      )}
+        </div>
+     )}
 
-    </div>
+    </div >
   );
 }

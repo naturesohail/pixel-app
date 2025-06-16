@@ -2,98 +2,58 @@
 import React, { useState, useEffect } from 'react';
 import FrontEndLayout from '@/app/layouts/FrontendLayout';
 import { Spinner } from '@/app/utills/Spinner';
-import { Bid } from "@/app/types/bidTypes"
 import Header from '@/app/components/Header';
 import { useAuth } from '@/app/context/AuthContext';
-import { loadStripe } from "@stripe/stripe-js";
 
-const stripePromise = loadStripe("pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9");
+// Define Transaction type
+type Transaction = {
+  _id: string;
+  productId: {
+    _id: string;
+    title: string;
+  };
+  amount: number;
+  pixelCount: number;
+  status: 'pending' | 'completed' | 'failed';
+  paymentMethod: string;
+  transactionDate: string;
+};
 
-export default function ProductBidsView() {
+export default function TransactionsView() {
   const { user } = useAuth();
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const [bids, setBids] = useState<Bid[]>([]);
-  const [filteredBids, setFilteredBids] = useState<Bid[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handlePayBid = async (bid: Bid) => {
-    setIsProcessing(true);
-    try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: [
-            {
-              name: bid.productId.productName,
-              price: bid.bidAmount,
-              quantity: 1,
-            },
-          ],
-          successUrl: `${window.location.origin}/success`,
-          cancelUrl: `${window.location.origin}/cancel`,
-        }),
-      });
-
-      const { sessionId } = await response.json();
-      const stripe = await stripePromise;
-      if (stripe) await stripe.redirectToCheckout({ sessionId });
-    } catch (error) {
-      console.error("Checkout error:", error);
-      alert("Error initiating payment. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   useEffect(() => {
-    async function fetchBids() {
+    async function fetchTransactions() {
       try {
-        const res = await fetch(`/api/user/profile/${user?._id}`);
-        if (!res.ok) throw new Error('Failed to fetch bids');
-        const data: Bid[] = await res.json();
-        setBids(data);
-        setFilteredBids(data);
+        const res = await fetch(`/api/transactions`);
+        if (!res.ok) throw new Error('Failed to fetch transactions');
+        const { transactions } = await res.json();
+        setTransactions(transactions);
+        setFilteredTransactions(transactions);
       } catch (err) {
-        console.error('Error loading bids:', err);
+        console.error('Error loading transactions:', err);
       } finally {
         setIsLoading(false);
       }
     }
 
-    if (user?._id) fetchBids();
-  }, [user?._id]);
+    if (user) fetchTransactions();
+  }, [user]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
     setSearchTerm(value);
-    setFilteredBids(
-      bids.filter(
-        (bid) =>
-          bid.userId.name.toLowerCase().includes(value) ||
-          bid.userId.email.toLowerCase().includes(value)
+    setFilteredTransactions(
+      transactions.filter(
+        (transaction) =>
+          transaction.productId.title.toLowerCase().includes(value) ||
+          transaction.status.toLowerCase().includes(value)
       )
     );
-  };
-
-  const handleDelete = async (bidId: string) => {
-    if (!confirm('Are you sure you want to delete this bid?')) return;
-
-    try {
-      const res = await fetch(`/api/bids?id=${bidId}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) throw new Error('Failed to delete bid');
-
-      setBids((prev) => prev.filter((b) => b._id !== bidId));
-      setFilteredBids((prev) => prev.filter((b) => b._id !== bidId));
-    } catch (err) {
-      console.error('Delete error:', err);
-      alert('Failed to delete bid.');
-    }
   };
 
   return (
@@ -107,7 +67,7 @@ export default function ProductBidsView() {
             type="text"
             value={searchTerm}
             onChange={handleSearch}
-            placeholder="Search by name or email"
+            placeholder="Search by product or status"
             className="border rounded-md px-3 py-2 w-64 focus:outline-none focus:ring"
           />
         </div>
@@ -116,7 +76,7 @@ export default function ProductBidsView() {
           <div className="flex justify-center items-center h-40">
             <Spinner />
           </div>
-        ) : filteredBids.length === 0 ? (
+        ) : filteredTransactions.length === 0 ? (
           <p className="text-gray-500">No Transactions Found.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -125,44 +85,37 @@ export default function ProductBidsView() {
                 <tr>
                   <th className="px-4 py-2 border-b">#</th>
                   <th className="px-4 py-2 border-b">Product</th>
-                  <th className="px-4 py-2 border-b">Bid Amount</th>
+                  <th className="px-4 py-2 border-b">Amount</th>
                   <th className="px-4 py-2 border-b">Pixels</th>
-                  <th className="px-4 py-2 border-b">Time</th>
-                  <th className="px-4 py-2 border-b">Actions</th>
-                  <th className="px-4 py-2 border-b">Pay</th>
-
-
+                  <th className="px-4 py-2 border-b">Date</th>
+                  <th className="px-4 py-2 border-b">Status</th>
+                  <th className="px-4 py-2 border-b">Payment Method</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredBids.map((bid, index) => (
-                  <tr key={bid._id} className="hover:bg-gray-50">
+                {filteredTransactions.map((transaction, index) => (
+                  <tr key={transaction._id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 border-b">{index + 1}</td>
-                    <td className="px-4 py-2 border-b">{bid?.productId?.productName}</td>
-                    <td className="px-4 py-2 border-b">${bid.bidAmount.toLocaleString()}</td>
-                    <td className="px-4 py-2 border-b">{bid.totalPixels.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">{transaction.productId.title}</td>
+                    <td className="px-4 py-2 border-b">${transaction.amount.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">{transaction.pixelCount.toLocaleString()}</td>
                     <td className="px-4 py-2 border-b">
-                      {new Date(bid.createdAt).toLocaleString()}
+                      {new Date(transaction.transactionDate).toLocaleString()}
                     </td>
                     <td className="px-4 py-2 border-b">
-                      <button
-                        onClick={() => handleDelete(bid._id)}
-                        className="text-red-600 hover:underline"
-                      >
-                        Revert
-                      </button>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        transaction.status === 'completed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : transaction.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : 'bg-red-100 text-red-800'
+                      }`}>
+                        {transaction.status}
+                      </span>
                     </td>
-
-                    <td className="px-4 py-2 border-b">
-                      <button
-                        onClick={() => handlePayBid(bid)}
-                        className="text-blue-600 hover:underline"
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? "Processing..." : "Pay"}
-                      </button>
+                    <td className="px-4 py-2 border-b capitalize">
+                      {transaction.paymentMethod}
                     </td>
-
                   </tr>
                 ))}
               </tbody>

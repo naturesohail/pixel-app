@@ -370,7 +370,7 @@ useEffect(() => {
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Buy Pixels</h5>
+                <h5 className="modal-title">Upload Pixel Details</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -399,7 +399,7 @@ useEffect(() => {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label">Product Title*</label>
+                    <label className="form-label">Pixel Title*</label>
                     <input
                       type="text"
                       className="form-control"
@@ -414,7 +414,7 @@ useEffect(() => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Product Images</label>
+                    <label className="form-label">Pixel Images</label>
                     <input
                       type="file"
                       className="form-control"
@@ -460,7 +460,7 @@ useEffect(() => {
                     </div>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Product URL</label>
+                    <label className="form-label">Pixel URL</label>
                     <input
                       type="url"
                       className="form-control"

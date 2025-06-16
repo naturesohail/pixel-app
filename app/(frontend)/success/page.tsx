@@ -15,11 +15,10 @@ function SuccessContent() {
   useEffect(() => {
     const verifyPayment = async () => {
       const sessionId = searchParams.get('session_id');
-      // const productId = searchParams.get('product_id');
 
-      if (!sessionId ) {
+      if (!sessionId) {
         setStatus('error');
-        // setMessage('Invalid session');
+        setMessage('Invalid session');
         return;
       }
 
@@ -34,6 +33,10 @@ function SuccessContent() {
 
         setStatus('success');
         setMessage('Payment confirmed! Your pixels have been allocated.');
+        
+        setTimeout(() => {
+          router.push('/');
+        }, 3000);
       } catch (error) {
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'Payment verification failed');
@@ -41,7 +44,7 @@ function SuccessContent() {
     };
 
     verifyPayment();
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   return (
     <div className="max-w-2xl mx-auto p-6 mt-40">
@@ -56,6 +59,7 @@ function SuccessContent() {
         <div className="bg-green-50 p-4 rounded-lg">
           <h2 className="text-xl font-bold text-green-800">Success!</h2>
           <p className="mt-2 text-green-600">{message}</p>
+          <p className="mt-2 text-green-600">You will be redirected to the home page shortly...</p>
         </div>
       )}
 
@@ -63,8 +67,8 @@ function SuccessContent() {
         <div className="bg-red-50 p-4 rounded-lg">
           <h2 className="text-xl font-bold text-red-800">Error</h2>
           <p className="mt-2 text-red-600">{message}</p>
-          <button
-            onClick={() => router.push('/account')}
+          <button 
+            onClick={() => router.push('/account')}  
             className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
           >
             Go to Account
