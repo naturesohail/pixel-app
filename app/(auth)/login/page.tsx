@@ -5,14 +5,14 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import Link from "next/link";
 import { AtSymbolIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { useAuth } from "@/app/context/AuthContext"; // Add this import
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth(); // Get the login function from AuthContext
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +51,7 @@ export default function Login() {
       }).then(() => {
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("userData", JSON.stringify(data.user));
-        router.push("/profile");
+        router.push("/");
       });
     } catch (error: any) {
       Swal.fire({

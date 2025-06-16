@@ -1,7 +1,5 @@
 "use client";
-const stripePromise = loadStripe(
-  "pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9"
-);
+const stripePromise = loadStripe("pk_test_51R7u7XFWt2YrxyZwQ7kODs2zn8kBC3rbqOf8bU4JfAvtyyWpd96TYtikYji8oyP04uClsnEqxlg0ApdiImX4Xhtm00NGDkbha9");
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -41,18 +39,12 @@ interface PixelGrid {
     auctionZones: any[];
   };
 }
-type Props = {
-  params: {
-    id: string;
-  };
-};
 
 
 export default function BuyItNowPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
-
   const [pixelGrid, setPixelGrid] = useState<PixelGrid | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +65,6 @@ export default function BuyItNowPage() {
   ;
   const zoneId = params.id
   useEffect(() => {
-    // This effect runs only on client side
     if (typeof window !== "undefined") {
       const userData = localStorage.getItem("userData");
       if (userData) {
@@ -86,8 +77,11 @@ export default function BuyItNowPage() {
       }
     }
   }, []);
-console.log('activeAuctionZone :>> ', activeAuctionZone);
-  useEffect(() => {
+
+
+// console.log('activeAuctionZone :>> ', activeAuctionZone);
+ 
+useEffect(() => {
     if (userId === null && typeof window !== "undefined") return;
 
     const fetchPixelGrid = async () => {
@@ -117,9 +111,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
         setActiveAuctionZone(activeZone);
         
         if (userId) {
-          const bid = data.config.auctionZones
-            .find((z: any) => z.status)
-            ?.bids.find((bid: any) => bid.winStatus && bid.userId === userId);
+          const bid = data.config.auctionZones.find((z: any) => z.status)?.bids.find((bid: any) => bid.winStatus && bid.userId === userId);
           setBidData(bid);
         }
         
@@ -135,6 +127,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
     };
 
     fetchPixelGrid();
+
   }, [userId]);
 
   const incrementCount = () => {
@@ -178,7 +171,8 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
     }
     setShowActionModal(true);
   };
-const handleBuyNow = async () => {
+  
+ const handleBuyNow = async () => {
   if (!user || !pixelGrid) {
     showLoginAlert();
     return;
@@ -195,9 +189,7 @@ const handleBuyNow = async () => {
         totalPrice: totalPriceBid || totalPrice,
         productData: productForm,
         isOneTimePurchase: true,
-        targetZoneId: pixelGrid.config.auctionZones.find(
-          (z) => z.status === "active"
-        )?._id,
+        targetZoneId: zoneId
       }),
     });
 
@@ -223,53 +215,9 @@ const handleBuyNow = async () => {
   } finally {
     setIsProcessing(false);
   }
-};
+ };
 
-  // const handleBuyNow = async () => {
-  //   if (!user || !pixelGrid) {
-  //     showLoginAlert();
-  //     return;
-  //   }
-
-  //   setIsProcessing(true);
-  //   try {
-  //     const response = await fetch("/api/create-checkout-session", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({
-  //         userId: user._id,
-  //         pixelCount,
-  //         totalPrice: totalPriceBid || totalPrice,
-  //         productData: productForm,
-  //         isOneTimePurchase: true,
-  //         targetZoneId: pixelGrid.config.auctionZones.find(
-  //           (z) => z.status === "active"
-  //         )?._id,
-  //       }),
-  //     });
-
-  //     const session = await response.json();
-  //     if (session.error) {
-  //       Swal.fire({
-  //         title: "Checkout Failed",
-  //         text:
-  //           session.error instanceof Error
-  //             ? session.error
-  //             : "Something went wrong",
-  //         icon: "error",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.log("Checkout error:", error);
-  //     Swal.fire({
-  //       title: "Checkout Failed",
-  //       text: error instanceof Error ? error.message : "Something went wrong",
-  //       icon: "error",
-  //     });
-  //   } finally {
-  //     setIsProcessing(false);
-  //   }
-  // };
+ 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -364,16 +312,7 @@ const handleBuyNow = async () => {
                 <div className="mb-4">
                   <label className="form-label">Number of pixels:</label>
                   <div className="d-flex align-items-center">
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={decrementCount}
-                      disabled={
-                        pixelCount <=
-                        (pixelGrid?.config.minimumOrderQuantity || 1)
-                      }
-                    >
-                      -
-                    </button>
+                   
                     <div
                       className="mx-2"
                       style={{ width: "80px", textAlign: "center" }}
@@ -384,27 +323,15 @@ const handleBuyNow = async () => {
                         ].totalPixels
                       }
                     </div>
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={incrementCount}
-                      disabled={
-                        !pixelGrid ||
-                        pixelCount >= pixelGrid.config.availablePixels
-                      }
-                    >
-                      +
-                    </button>
+                  
                   </div>
-                  <small className="text-muted">
-                    Min: {pixelGrid?.config.minimumOrderQuantity || 1}, Max:{" "}
-                    {pixelGrid?.config.availablePixels || 0} available
-                  </small>
+                 
                 </div>
 
                 <div className="alert alert-info mb-4">
                   <div className="d-flex justify-content-between">
                     <span>Price per pixel:</span>
-                    <strong>${activeAuctionZone?.pixelPrice}</strong>
+                    <strong>${activeAuctionZone?.buyNowPrice}</strong>
                   </div>
                   <div className="d-flex justify-content-between">
                     <span>Total Price:</span>
@@ -544,21 +471,7 @@ const handleBuyNow = async () => {
                     />
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Description*</label>
-                    <textarea
-                      className="form-control"
-                      rows={3}
-                      value={productForm.description}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          description: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
+                 
                 </form>
               </div>
               <div className="modal-footer">
@@ -575,8 +488,7 @@ const handleBuyNow = async () => {
                   onClick={handleBuyNow}
                   disabled={
                     isProcessing ||
-                    !productForm.title ||
-                    !productForm.description
+                    !productForm.title 
                   }
                 >
                   {isProcessing ? "Processing..." : "Confirm Purchase"}

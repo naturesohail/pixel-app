@@ -15,11 +15,11 @@ function SuccessContent() {
   useEffect(() => {
     const verifyPayment = async () => {
       const sessionId = searchParams.get('session_id');
-      const productId = searchParams.get('product_id');
+      // const productId = searchParams.get('product_id');
 
-      if (!sessionId || !productId) {
+      if (!sessionId ) {
         setStatus('error');
-        setMessage('Invalid session');
+        // setMessage('Invalid session');
         return;
       }
 
@@ -27,7 +27,7 @@ function SuccessContent() {
         const response = await fetch('/api/verify-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, productId })
+          body: JSON.stringify({ sessionId })
         });
 
         if (!response.ok) throw new Error('Payment verification failed');

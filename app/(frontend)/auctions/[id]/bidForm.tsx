@@ -27,23 +27,6 @@ export default function BidForm({
   const [isOneTimePurchase, setIsOneTimePurchase] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Countdown Timer
-  // const getMyBids = async (userId: string) => {
-  //   const response = await fetch(`/api/pixels/bid?userId=${userId}`);
-  //   const data = await response.json();
-
-  //   if (response.ok) {
-  //     console.log("✅ Your bids:", data.bids);
-  //   } else {
-  //     console.error("❌ Error fetching your bids:", data.error);
-  //   }
-  // };
-
-  // useEffect(()=>{
-  //   if(!userId) return
-  // getMyBids(userId)
-  // },[userId])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -74,65 +57,69 @@ export default function BidForm({
   };
 
   console.log("activeAuctionZone :>> ", activeAuctionZone);
+
   return (
-    <div className="p-6 max-w-lg mx-auto bg-white shadow-md rounded-md">
-      <h2 className="text-xl font-semibold mb-4">Place a Bid</h2>
-      <Timer />
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <label>Total Pixels</label>
-        <input
-          className="w-full border p-2"
-          type="number"
-          placeholder="Pixel Count"
-          value={activeAuctionZone?.totalPixels}
-          disabled
-        />
-        <label>Set Your Price (1 pixel)</label>
+    <div className="p-6 max-w-lg mx-auto bg-white shadow-lg rounded-xl border border-gray-200">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+        Place a Bid
+      </h2>
+
+      <div className="mb-6">
+        <Timer />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Total Pixels
+          </label>
           <input
-            className="w-full border p-2"
+            className="w-full border border-gray-300 rounded-md p-2 bg-gray-100"
             type="number"
-            placeholder="enter your bid amount"
+            placeholder="Pixel Count"
+            value={activeAuctionZone?.totalPixels}
+            disabled
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Set Your Price (per pixel)
+          </label>
+          <input
+            className="w-full border border-gray-300 rounded-md p-2"
+            type="number"
+            placeholder="Enter your bid amount"
             value={bidAmount}
             onChange={(e) => setbidAmount(Number(e.target.value))}
             required
           />
-          <span>
-            Instant Purchase Price ${activeAuctionZone?.buyNowPrice}/per pixel{" "}
-            <button style={{
-              backgroundColor:"green",
-              padding:"5px 10px",
-              borderRadius:6
-            }}>
-              <Link
-                href={"/buy-it-now/" + activeAuctionZone._id}
-                className="hover:text-blue-600"
-              >
-                Buy it Now
-              </Link>
-            </button>
-          </span>
-        </div>
 
-        {/* <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={isOneTimePurchase}
-            onChange={(e) => setIsOneTimePurchase(e.target.checked)}
-          />
-          <span className="ml-2">One-Time Purchase</span>
-        </label> */}
+          <div className="mt-3 flex items-center justify-between text-sm">
+            <span className="text-gray-600">
+              Instant Purchase Price:{" "}
+              <strong>${activeAuctionZone?.buyNowPrice}/pixel</strong>
+            </span>
+            <Link
+              href={`/buy-it-now/${activeAuctionZone._id}`}
+              className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition"
+            >
+              Buy it Now
+            </Link>
+          </div>
+        </div>
 
         <button
           type="submit"
-          // disabled={timeLeft <= 0}
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50"
         >
           Submit Bid
         </button>
       </form>
 
-      {message && <p className="mt-4 text-sm text-gray-700">{message}</p>}
+      {message && (
+        <p className="mt-6 text-sm text-center text-gray-700">{message}</p>
+      )}
     </div>
   );
 }
