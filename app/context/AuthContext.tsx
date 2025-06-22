@@ -33,9 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { 
-        method: "POST", 
-        credentials: "include" 
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
       });
       setUser(null);
       localStorage.removeItem("userData");
@@ -43,17 +43,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Logout failed:", error);
     }
   };
-
   useEffect(() => {
     async function checkLogin() {
-      try {
-        // First check localStorage for quick hydration
-        const localUser = localStorage.getItem("userData");
-        if (localUser) {
-          setUser(JSON.parse(localUser));
-        }
+      setIsLoading(true);
+      const localUser = localStorage.getItem("userData");
 
-        // Then verify with the server
+      // If we have user data in localStorage, use it and don't call the API
+      if (localUser) {
+        try {
+          const parsedUser = JSON.parse(localUser);
+          setUser(parsedUser);
+        } catch (e) {
+          localStorage.removeItem("userData");
+        } finally {
+          setIsLoading(false);
+        }
+        return; // Exit early if we had local user data
+      }
+
+      // Only make API call if no local user data exists
+      try {
         const res = await fetch("/api/auth/me", {
           method: "GET",
           credentials: "include",
@@ -68,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem("userData");
         }
       } catch (error) {
+        console.error("Auth check failed:", error);
         setUser(null);
         localStorage.removeItem("userData");
       } finally {
@@ -77,15 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkLogin();
   }, []);
-
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isLoggedIn: !!user, 
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoggedIn: !!user,
         isLoading,
         login,
-        logout 
+        logout
       }}
     >
       {children}
