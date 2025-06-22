@@ -73,7 +73,7 @@ export default function ProductBidsView() {
 
     if (user?._id) fetchBids();
   }, [user?._id]);
-
+console.log('bids :>> ', bids);
   return (
     <FrontEndLayout>
       <Header />

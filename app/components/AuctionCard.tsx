@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { Product } from "../types/productTypes";
 import { AuctionZone } from "../types/AuctionZoneTypes";
+import MiniMap from "../(frontend)/test/MiniMap";
 
 export default function AuctionCard({ config, products }: any) {
   const router = useRouter();
@@ -13,30 +14,38 @@ export default function AuctionCard({ config, products }: any) {
   const [hoveredZone, setHoveredZone] = useState<any | null>(null);
   const [hoveredProduct, setHoveredProduct] = useState<Product | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(new Set());
+  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(
+    new Set()
+  );
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
   const [auctionZones, setAuctionZones] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
-  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(3);
   const [showAuctionModal, setShowAuctionModal] = useState(false);
   const [pixelPrice, setPixelPrice] = useState<number>(0);
   const [buyNowPrice, setBuyNowPrice] = useState<number>(config?.oneTimePrice);
-
+  const [viewX, setViewX] = useState(0);
+  const [viewY, setViewY] = useState(0);
   const isAuthUser = !!user;
   const pixelSize = 12;
   const cols = 1000;
   const rows = 1000;
-
+  const windowWidth = window.innerWidth || 1366;
+  const windowHeight = window.innerHeight || 1920;
+  const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
   const productMap = useRef<Record<number, Product>>({});
   console.log("auctionZones :>> ", auctionZones);
   useEffect(() => {
     if (config?.auctionZones) {
-
-      setBuyNowPrice(config?.oneTimePrice)
+      setBuyNowPrice(config?.oneTimePrice);
       const now = new Date();
       const zones = config.auctionZones
         .map((zone: any) => ({
@@ -96,7 +105,7 @@ export default function AuctionCard({ config, products }: any) {
     return () => clearInterval(interval);
   }, [auctionZones]);
 
-const minBuyNowPrice = config?.oneTimePrice ?? 20;
+  const minBuyNowPrice = config?.oneTimePrice ?? 20;
 
   const isAreaOverlapping = (zones: AuctionZone[]) => {
     for (let i = 0; i < zones.length; i++) {
@@ -169,7 +178,6 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
     });
   }, [auctionZones]);
 
-  
   const laodImage = (img: string, aId: string) => {
     const dummyImg = new Image();
     dummyImg.src = img;
@@ -181,115 +189,121 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = cols * pixelSize;
-    canvas.height = rows * pixelSize;
+    const viewWidth = viewSize * pixelSize;
+    const viewHeight = viewSize * pixelSize;
+    canvas.width = viewWidth;
+    canvas.height = viewHeight;
 
     // Draw white background
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid lines
+    // Draw grid lines within view window
     ctx.strokeStyle = "#e0e0e0";
-    ctx.lineWidth = 1;
-    for (let col = 0; col <= cols; col++) {
+    ctx.lineWidth = 0.5;
+    for (let col = viewX; col <= viewX + viewSize; col++) {
       ctx.beginPath();
-      ctx.moveTo(col * pixelSize, 0);
-      ctx.lineTo(col * pixelSize, canvas.height);
+      ctx.moveTo((col - viewX) * pixelSize, 0);
+      ctx.lineTo((col - viewX) * pixelSize, viewHeight);
       ctx.stroke();
     }
-    for (let row = 0; row <= rows; row++) {
+    for (let row = viewY; row <= viewY + viewSize; row++) {
       ctx.beginPath();
-      ctx.moveTo(0, row * pixelSize);
-      ctx.lineTo(canvas.width, row * pixelSize);
+      ctx.moveTo(0, (row - viewY) * pixelSize);
+      ctx.lineTo(viewWidth, (row - viewY) * pixelSize);
       ctx.stroke();
     }
 
-    // Draw auction zones
-
+    // Draw auction zones in view
     auctionZones.forEach((zone) => {
-      const zoneX = zone.x * pixelSize;
-      const zoneY = zone.y * pixelSize;
-      const zoneWidth = zone.width * pixelSize;
-      const zoneHeight = zone.height * pixelSize;
+      if (
+        zone.x + zone.width >= viewX &&
+        zone.y + zone.height >= viewY &&
+        zone.x <= viewX + viewSize &&
+        zone.y <= viewY + viewSize
+      ) {
+        const zoneX = (zone.x - viewX) * pixelSize;
+        const zoneY = (zone.y - viewY) * pixelSize;
+        const zoneWidth = zone.width * pixelSize;
+        const zoneHeight = zone.height * pixelSize;
 
-      // Fill background color (under the image, for transparency fallback)
-      let fillColor;
-      if (zone.status === "sold") {
-        fillColor = "rgba(0, 200, 0, 0.2)";
-      } else if (zone.status === "expired") {
-        fillColor = "rgba(255, 0, 0, 0.2)";
-      } else if (zone?.bids?.length) {
-        fillColor = "rgba(255, 111, 0, 0.52)";
-      } else {
-        fillColor = "rgba(20, 81, 171, 0.2)";
-      }
-
-      ctx.fillStyle = fillColor;
-      ctx.fillRect(zoneX, zoneY, zoneWidth, zoneHeight);
-
-      // Draw image (if loaded)
-      const img = imageCache.current[zone._id];
-      if (img) {
-        if (img?.complete) {
-          ctx.drawImage(img, zoneX, zoneY, zoneWidth, zoneHeight);
-        } else if (img) {
-          img.onload = () => {
-            ctx.drawImage(img, zoneX, zoneY, zoneWidth, zoneHeight);
-          };
+        let fillColor;
+        if (zone.status === "sold") {
+          fillColor = "rgba(0, 200, 0, 0.2)";
+        } else if (zone.status === "expired") {
+          fillColor = "rgba(255, 0, 0, 0.2)";
+        } else if (zone?.bids?.length) {
+          fillColor = "rgba(255, 111, 0, 0.52)";
+        } else {
+          fillColor = "rgba(20, 81, 171, 0.2)";
         }
-      }
-      console.log(" zone.bids.length :>> ", zone.status);
-      // Stroke border
-      ctx.strokeStyle =
-        zone.status === "sold"
-          ? "#00c800"
-          : zone?.status === "expired"
-            ? "#c80000"
-            : zone?.bids?.length
-              ? "rgb(255, 111, 0)"
-              : "#0064ff";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(zoneX, zoneY, zoneWidth, zoneHeight);
 
-      // Draw info text (on top)
-      if (zone.width > 5 && zone.height > 5) {
-        ctx.fillStyle =
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(zoneX, zoneY, zoneWidth, zoneHeight);
+
+        const img = imageCache.current[zone._id];
+        if (img) {
+          if (img.complete) {
+            ctx.drawImage(img, zoneX, zoneY, zoneWidth, zoneHeight);
+          } else {
+            img.onload = () => {
+              ctx.drawImage(img, zoneX, zoneY, zoneWidth, zoneHeight);
+            };
+          }
+        }
+
+        ctx.strokeStyle =
           zone.status === "sold"
-            ? "#004d00"
+            ? "#00c800"
             : zone.status === "expired"
+            ? "#c80000"
+            : zone.bids?.length
+            ? "rgb(255, 111, 0)"
+            : "#0064ff";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(zoneX, zoneY, zoneWidth, zoneHeight);
+
+        if (zone.width > 5 && zone.height > 5) {
+          ctx.fillStyle =
+            zone.status === "sold"
+              ? "#004d00"
+              : zone.status === "expired"
               ? "#800000"
-              : zone?.bids?.length
-                ? "rgb(255, 111, 0)"
-                : "#003366";
-        ctx.font = "bold 12px Arial";
-        ctx.textAlign = "center";
+              : zone.bids?.length
+              ? "rgb(255, 111, 0)"
+              : "#003366";
+          ctx.font = "bold 12px Arial";
+          ctx.textAlign = "center";
 
-
-
-        if (zone.auctionEndDate && zone.isEmpty) {
-          ctx.fillText(
-            `${zone.width}x${zone.height} (${zone.totalPixels}px)`,
-            zoneX + zoneWidth / 2,
-            zoneY + zoneHeight / 2
-          );
-          const endDate = new Date(zone.auctionEndDate);
-          const daysLeft = Math.ceil(
-            (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-          );
-          ctx.fillText(
-            `Ends in ${daysLeft}d`,
-            zoneX + zoneWidth / 2,
-            zoneY + zoneHeight / 2 + 15
-          );
+          if (zone.auctionEndDate && zone.isEmpty) {
+            ctx.fillText(
+              `${zone.width}x${zone.height} (${zone.totalPixels}px)`,
+              zoneX + zoneWidth / 2,
+              zoneY + zoneHeight / 2
+            );
+            const endDate = new Date(zone.auctionEndDate);
+            const daysLeft = Math.ceil(
+              (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            );
+            ctx.fillText(
+              `Ends in ${daysLeft}d`,
+              zoneX + zoneWidth / 2,
+              zoneY + zoneHeight / 2 + 15
+            );
+          }
         }
       }
     });
 
+    // Draw current selection in view
     if (isAuthUser && currentSelection) {
+      const selX = (currentSelection.x - viewX) * pixelSize;
+      const selY = (currentSelection.y - viewY) * pixelSize;
+
       ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
       ctx.fillRect(
-        currentSelection.x * pixelSize,
-        currentSelection.y * pixelSize,
+        selX,
+        selY,
         currentSelection.width * pixelSize,
         currentSelection.height * pixelSize
       );
@@ -297,23 +311,21 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
       ctx.strokeStyle = "#0064ff";
       ctx.lineWidth = 2;
       ctx.strokeRect(
-        currentSelection.x * pixelSize,
-        currentSelection.y * pixelSize,
+        selX,
+        selY,
         currentSelection.width * pixelSize,
         currentSelection.height * pixelSize
       );
     }
 
-    // Draw products
+    // Draw products in view
     const renderedProductIds = new Set<string>();
-
     products?.forEach((product: any) => {
       if (
         !renderedProductIds.has(product._id) &&
         renderedProducts.has(product._id)
       ) {
         renderedProductIds.add(product._id);
-        // const img = imageCache.current[product.images[0]];
         const img = imageCache.current["auctionZoneImage"];
 
         if (
@@ -326,37 +338,44 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
           const width = product.pixelCount;
           const height = 1;
 
-          ctx.drawImage(
-            img,
-            x * pixelSize,
-            y * pixelSize,
-            width * pixelSize,
-            height * pixelSize
-          );
+          if (
+            x + width >= viewX &&
+            y + height >= viewY &&
+            x <= viewX + viewSize &&
+            y <= viewY + viewSize
+          ) {
+            const px = (x - viewX) * pixelSize;
+            const py = (y - viewY) * pixelSize;
 
-          const isInAuctionZone = auctionZones.some(
-            (zone) =>
-              x >= zone.x &&
-              x + width <= zone.x + zone.width &&
-              y >= zone.y &&
-              y + height <= zone.y + zone.height
-          );
+            ctx.drawImage(img, px, py, width * pixelSize, height * pixelSize);
 
-          if (isInAuctionZone) {
-            ctx.strokeStyle =
-              product.purchaseType === "bid" ? "#ff9900" : "#00cc00";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(
-              x * pixelSize,
-              y * pixelSize,
-              width * pixelSize,
-              height * pixelSize
+            const isInAuctionZone = auctionZones.some(
+              (zone) =>
+                x >= zone.x &&
+                x + width <= zone.x + zone.width &&
+                y >= zone.y &&
+                y + height <= zone.y + zone.height
             );
+
+            if (isInAuctionZone) {
+              ctx.strokeStyle =
+                product.purchaseType === "bid" ? "#ff9900" : "#00cc00";
+              ctx.lineWidth = 1;
+              ctx.strokeRect(px, py, width * pixelSize, height * pixelSize);
+            }
           }
         }
       }
     });
-  }, [products, renderedProducts, auctionZones, isAuthUser, currentSelection]);
+  }, [
+    products,
+    renderedProducts,
+    auctionZones,
+    isAuthUser,
+    currentSelection,
+    viewX,
+    viewY,
+  ]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isAuthUser) return;
@@ -570,18 +589,16 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
     }
   };
 
-
   const handleClick = (e: React.MouseEvent) => {
-
     if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
       // Open product URL in new tab
       window.open(hoveredZone.products.url, "_blank");
       return;
-    }
-
-    else if (hoveredZone) {
+    } else if (hoveredZone) {
       if (!user) {
-        const confirmed = window.confirm("You need to log in first to place a bid or purchase this zone.");
+        const confirmed = window.confirm(
+          "You need to log in first to place a bid or purchase this zone."
+        );
         if (confirmed) {
           router.push("/login");
         }
@@ -606,28 +623,57 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
       router.push(`/product/${product._id}`);
       return;
     }
-  }
+  };
 
   useEffect(() => {
     drawCanvas();
   }, [drawCanvas]);
 
   return (
-
-    <div className="col-lg-12">
+    <div className="col-lg-12 p-0">
       <div className="card million-dollar-style">
         <div className="card-body">
-
           <div className="position-relative">
-            <div ref={containerRef} style={{ overflowY: "auto", maxHeight: "70vh" }}>
-              <div style={{ width: `${cols * pixelSize}px`, height: `${rows * pixelSize}px` }}>
+            <div
+              ref={containerRef}
+              style={{
+                overflowY: "auto",
+                maxHeight: "70vh",
+                paddingBottom: 210,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  bottom: 0,
+                }}
+              >
+                <MiniMap
+                  data={auctionZones}
+                  fullSize={1000}
+                  viewSize={viewSize}
+                  onViewChange={(x, y) => {
+                    setViewX(x);
+                    setViewY(y);
+                  }}
+                />
+              </div>
+              <div>
                 <canvas
                   ref={canvasRef}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onClick={handleClick}
-                  style={{ cursor: isAuthUser ? "pointer" : hoveredProduct || hoveredZone ? "pointer" : "default", backgroundColor: "#fff" }}
+                  style={{
+                    cursor: isAuthUser
+                      ? "pointer"
+                      : hoveredProduct || hoveredZone
+                      ? "pointer"
+                      : "default",
+                    backgroundColor: "#fff",
+                  }}
                 />
               </div>
             </div>
@@ -643,31 +689,46 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
                   padding: "10px",
                   borderRadius: "5px",
                   boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                  border: `2px solid ${hoveredZone.status === "sold"
-                    ? "#00c800"
-                    : hoveredZone.status === "expired"
+                  border: `2px solid ${
+                    hoveredZone.status === "sold"
+                      ? "#00c800"
+                      : hoveredZone.status === "expired"
                       ? "#c80000"
                       : "#0064ff"
-                    }`,
-                  cursor: 'pointer !important',
+                  }`,
+                  cursor: "pointer !important",
                   zIndex: 1000,
-                }}>
-
+                }}
+              >
                 <h5>{hoveredZone.isEmpty ? "Empty Auction Zone" : ""}</h5>
 
                 {hoveredZone.isEmpty && (
                   <>
                     <p>
-                      { }Size: {hoveredZone.width}x{hoveredZone.height} pixels
+                      {}Size: {hoveredZone.width}x{hoveredZone.height} pixels
                     </p>
                     <p>Total Pixels: {hoveredZone.totalPixels}</p>
-                    <p>Position: ({hoveredZone.x}, {hoveredZone.y}) </p>
+                    <p>
+                      Position: ({hoveredZone.x}, {hoveredZone.y}){" "}
+                    </p>
                     <p>Status: {hoveredZone.status.toUpperCase()}</p>
                     {hoveredZone.auctionEndDate && (
-                      <p> Ends:{" "} {new Date(hoveredZone.auctionEndDate).toLocaleString()} </p>
+                      <p>
+                        {" "}
+                        Ends:{" "}
+                        {new Date(
+                          hoveredZone.auctionEndDate
+                        ).toLocaleString()}{" "}
+                      </p>
                     )}
                     {hoveredZone.buyNowPrice && (
-                      <p> Buy Now Price: $ {hoveredZone.buyNowPrice <= 1 ? "" : hoveredZone.buyNowPrice.toFixed(2)} </p>
+                      <p>
+                        {" "}
+                        Buy Now Price: ${" "}
+                        {hoveredZone.buyNowPrice <= 1
+                          ? ""
+                          : hoveredZone.buyNowPrice.toFixed(2)}{" "}
+                      </p>
                     )}
                     {hoveredZone.pixelPrice && (
                       <p>Pixel Price: ${hoveredZone.pixelPrice.toFixed(2)}</p>
@@ -676,14 +737,23 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
                 )}
                 {!hoveredZone.isEmpty && (
                   <div>
-                    <img src={hoveredZone.products?.images[0]} alt={hoveredZone.products?.title}
-                      style={{ width: "100px", height: "70px", objectFit: "cover", marginBottom: "10px" }} />
-                    <a href={hoveredZone.products?.url}>{hoveredZone.products?.url}</a>
+                    <img
+                      src={hoveredZone.products?.images[0]}
+                      alt={hoveredZone.products?.title}
+                      style={{
+                        width: "100px",
+                        height: "70px",
+                        objectFit: "cover",
+                        marginBottom: "10px",
+                      }}
+                    />
+                    <a href={hoveredZone.products?.url}>
+                      {hoveredZone.products?.url}
+                    </a>
                   </div>
                 )}
               </div>
             )}
-
           </div>
         </div>
       </div>
@@ -709,7 +779,7 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() => { }}
+                  onClick={() => {}}
                   aria-label="Close"
                 />
               </div>
@@ -731,7 +801,7 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
                   </select>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Pixel Price ($)</label>
+                  <label className="form-label">Bid Price ($)</label>
                   <input
                     type="number"
                     className="form-control"
@@ -739,122 +809,139 @@ const minBuyNowPrice = config?.oneTimePrice ?? 20;
                     step="0.01"
                     value={pixelPrice <= 0 ? "" : pixelPrice}
                     onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
-                    placeholder="Pixel Price"
+                    placeholder="Bid Price"
                   />
                 </div>{" "}
-                
-                 <div className="mb-3">
+                <div className="mb-3">
                   <label className="form-label">Instant Buy Prices ($)</label>
-                 <input
-                  type="number"
-                  className="form-control"
-                  step="1"
-                  min={config?.oneTimePrice ?? ''}
-                  placeholder={config?.oneTimePrice ? `Minimum $${config.oneTimePrice}` : 'Loading...'}
-                  value={buyNowPrice}
-                  onChange={(e) => {
-                    const newValue = parseFloat(e.target.value);
-                    setBuyNowPrice(isNaN(newValue) ? minBuyNowPrice : Math.max(minBuyNowPrice, newValue));
-                  }}
-                />
-                <small className="text-muted">
-                  Minimum price: ${minBuyNowPrice}
-                </small>
-
+                  <input
+                    type="number"
+                    className="form-control"
+                    step="1"
+                    min={config?.oneTimePrice ?? ""}
+                    placeholder={
+                      config?.oneTimePrice
+                        ? `Minimum $${config.oneTimePrice}`
+                        : "Loading..."
+                    }
+                    value={buyNowPrice}
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      setBuyNowPrice(
+                        isNaN(newValue)
+                          ? minBuyNowPrice
+                          : Math.max(minBuyNowPrice, newValue)
+                      );
+                    }}
+                  />
+                  <small className="text-muted">
+                    Minimum price: ${minBuyNowPrice}
+                  </small>
                 </div>
-
                 {/* In the display section */}
                 <p>
                   Instant Buy Price: $
                   {Math.max(
                     config?.oneTimePrice || 20,
-                    currentSelection.width * currentSelection.height * buyNowPrice
-                  ).toFixed(2)}
-                </p>
-
-              <div className="alert alert-info">
-                <p>
-                  <strong>Zone Details:</strong>
-                </p>
-                <p> Size: {currentSelection.width}x{currentSelection.height}{" "} Pixels </p>
-
-                <p> Position: ({currentSelection.x}, {currentSelection.y}) </p>
-                <p> Total Pixels:{" "} {currentSelection.width * currentSelection.height} </p>
-
-                <p> Base Price: ${(currentSelection.width *
-                  currentSelection.height *
-                  pixelPrice
-                ).toFixed(2)}
-                </p>
-
-                <p>
-                  Instant Buy Price: $
-                  {(
                     currentSelection.width *
-                    currentSelection.height *
-                    buyNowPrice
+                      currentSelection.height *
+                      buyNowPrice
                   ).toFixed(2)}
-
-
                 </p>
-                {!currentSelection.isEmpty && (
-                  <div>
-                    <p>
-                      Contains {currentSelection.products.length} product(s):
-                    </p>
-                    <ul>
-                      {currentSelection.products.map((product) => (
-                        <li key={product._id}>
-                          {product.title} - $
-                          {product.price?.toFixed(2) || "0.00"}
-                        </li>
-                      ))}
-                    </ul>
-                    <p>
-                      Total Products Value: $
-                      {currentSelection.products
-                        .reduce((sum, p) => sum + (p.price || 0), 0)
-                        .toFixed(2)}
-                    </p>
-                  </div>
-                )}
+                <div className="alert alert-info">
+                  <p>
+                    <strong>Zone Details:</strong>
+                  </p>
+                  <p>
+                    {" "}
+                    Size: {currentSelection.width}x{currentSelection.height}{" "}
+                    Pixels{" "}
+                  </p>
 
+                  <p>
+                    {" "}
+                    Position: ({currentSelection.x}, {currentSelection.y}){" "}
+                  </p>
+                  <p>
+                    {" "}
+                    Total Pixels:{" "}
+                    {currentSelection.width * currentSelection.height}{" "}
+                  </p>
+
+                  <p>
+                    {" "}
+                    Base Price: $
+                    {(
+                      currentSelection.width *
+                      currentSelection.height *
+                      pixelPrice
+                    ).toFixed(2)}
+                  </p>
+
+                  <p>
+                    Instant Buy Price: $
+                    {(
+                      currentSelection.width *
+                      currentSelection.height *
+                      buyNowPrice
+                    ).toFixed(2)}
+                  </p>
+                  {!currentSelection.isEmpty && (
+                    <div>
+                      <p>
+                        Contains {currentSelection.products.length} product(s):
+                      </p>
+                      <ul>
+                        {currentSelection.products.map((product) => (
+                          <li key={product._id}>
+                            {product.title} - $
+                            {product.price?.toFixed(2) || "0.00"}
+                          </li>
+                        ))}
+                      </ul>
+                      <p>
+                        Total Products Value: $
+                        {currentSelection.products
+                          .reduce((sum, p) => sum + (p.price || 0), 0)
+                          .toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setAuctionZones((prev: any) => {
-                    return prev.filter((item: any) => {
-                      setShowAuctionModal(false);
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setAuctionZones((prev: any) => {
+                      return prev.filter((item: any) => {
+                        setShowAuctionModal(false);
 
-                      return item.id != currentSelection.id
-                    })
-                  });
-                  setCurrentSelection(null);
-                  setError(null);
-                  drawCanvas();
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  saveAuctionZones();
-                }}
-              >
-                Create Auction Zone
-              </button>
+                        return item.id != currentSelection.id;
+                      });
+                    });
+                    setCurrentSelection(null);
+                    setError(null);
+                    drawCanvas();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    saveAuctionZones();
+                  }}
+                >
+                  Create Auction Zone
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        </div>
-     )}
-
-    </div >
+      )}
+    </div>
   );
 }
