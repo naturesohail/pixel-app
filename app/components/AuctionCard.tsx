@@ -42,7 +42,7 @@ export default function AuctionCard({ config, products }: any) {
   const windowHeight = window.innerHeight || 1920;
   const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
   const productMap = useRef<Record<number, Product>>({});
-  console.log("auctionZones :>> ", auctionZones);
+  console.log("config :>> ", config);
   useEffect(() => {
     if (config?.auctionZones) {
       setBuyNowPrice(config?.oneTimePrice);

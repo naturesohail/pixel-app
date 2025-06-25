@@ -55,9 +55,8 @@ export default function HomePage() {
         pixelIndices: number[];
         createdAt?: string;
         updatedAt?: string;
-
       }[];
-
+      oneTimePrice: number;
     };
     products: {
       _id: string;
@@ -80,7 +79,8 @@ export default function HomePage() {
               config: {
                 totalPixels: data.config.totalPixels,
                 availablePixels: data.config.availablePixels,
-                auctionZones: data.config.auctionZones
+                auctionZones: data.config.auctionZones,
+                oneTimePrice: data.config.oneTimePrice,
               },
               products: data.products || [],
             });
@@ -107,7 +107,7 @@ export default function HomePage() {
                   <Spinner />
                 ) : pixelData ? (
                   <div className="row">
-                     <AuctionCard
+                    <AuctionCard
                       config={pixelData.config}
                       products={pixelData.products}
                     />
