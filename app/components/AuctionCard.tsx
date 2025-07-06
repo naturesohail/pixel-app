@@ -813,31 +813,27 @@ export default function AuctionCard({ config, products }: any) {
                   />
                 </div>{" "}
                 <div className="mb-3">
-                  <label className="form-label">Instant Buy Prices ($)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    step="1"
-                    min={config?.oneTimePrice ?? ""}
-                    placeholder={
-                      config?.oneTimePrice
-                        ? `Minimum $${config.oneTimePrice}`
-                        : "Loading..."
-                    }
-                    value={buyNowPrice}
-                    onChange={(e) => {
-                      const newValue = parseFloat(e.target.value);
-                      setBuyNowPrice(
-                        isNaN(newValue)
-                          ? minBuyNowPrice
-                          : Math.max(minBuyNowPrice, newValue)
-                      );
-                    }}
-                  />
-                  <small className="text-muted">
-                    Minimum price: ${minBuyNowPrice}
-                  </small>
-                </div>
+  <label className="form-label">Instant Buy Prices ($)</label>
+  <input
+    type="number"
+    className="form-control"
+    step="0.01"
+    min={minBuyNowPrice}
+    placeholder={`Minimum $${minBuyNowPrice.toFixed(2)}`}
+    value={buyNowPrice}
+    onChange={(e) => {
+      const newValue = parseFloat(e.target.value);
+      setBuyNowPrice(
+        isNaN(newValue)
+          ? minBuyNowPrice
+          : Math.max(minBuyNowPrice, newValue)
+      );
+    }}
+  />
+  <small className="text-muted">
+    Minimum price: ${minBuyNowPrice.toFixed(2)}
+  </small>
+</div>
                 {/* In the display section */}
                 <p>
                   Instant Buy Price: $
