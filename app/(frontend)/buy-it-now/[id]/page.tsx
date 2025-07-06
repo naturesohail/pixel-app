@@ -63,7 +63,7 @@ export default function BuyItNowPage() {
   });
   const params = useParams();
   ;
-  const zoneId = params.id
+  const zoneId =   params?.id
   useEffect(() => {
     if (typeof window !== "undefined") {
       const userData = localStorage.getItem("userData");
