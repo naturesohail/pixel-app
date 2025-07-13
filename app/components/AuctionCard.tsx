@@ -214,7 +214,6 @@ export default function AuctionCard({ config, products }: any) {
       ctx.stroke();
     }
 
-    // Draw auction zones in view
     auctionZones.forEach((zone) => {
       if (
         zone.x + zone.width >= viewX &&
@@ -295,30 +294,53 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
 
-    // Draw current selection in view
     if (isAuthUser && currentSelection) {
-      const selX = (currentSelection.x - viewX) * pixelSize;
-      const selY = (currentSelection.y - viewY) * pixelSize;
+  const selX = (currentSelection.x - viewX) * pixelSize;
+  const selY = (currentSelection.y - viewY) * pixelSize;
 
-      ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
-      ctx.fillRect(
-        selX,
-        selY,
-        currentSelection.width * pixelSize,
-        currentSelection.height * pixelSize
-      );
+  const tempZone = {
+    ...currentSelection,
+    id: "check-temp-overlap",
+  };
 
-      ctx.strokeStyle = "#0064ff";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(
-        selX,
-        selY,
-        currentSelection.width * pixelSize,
-        currentSelection.height * pixelSize
-      );
-    }
+  const zonesToCheck = [...auctionZones, tempZone];
 
-    // Draw products in view
+  const hasOverlap = isAreaOverlapping(zonesToCheck);
+
+  // Use red fill if overlapping
+  ctx.fillStyle = hasOverlap
+    ? "rgba(255, 0, 0, 0.3)"
+    : "rgba(0, 100, 255, 0.3)";
+  ctx.fillRect(
+    selX,
+    selY,
+    currentSelection.width * pixelSize,
+    currentSelection.height * pixelSize
+  );
+
+  ctx.strokeStyle = hasOverlap ? "#ff0000" : "#0064ff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    selX,
+    selY,
+    currentSelection.width * pixelSize,
+    currentSelection.height * pixelSize
+  );
+
+ if (hasOverlap) {
+  setShowAuctionModal(false);
+  setIsDragging(false);
+  // return; 
+
+  setTimeout(() => {
+    setCurrentSelection(null);
+  }, 1000);
+
+}
+
+}
+
+
     const renderedProductIds = new Set<string>();
     products?.forEach((product: any) => {
       if (
@@ -528,7 +550,7 @@ export default function AuctionCard({ config, products }: any) {
     setError(null);
     drawCanvas();
 
-    return newZone; // only return the new zone
+    return newZone; 
   };
 
   const saveAuctionZones = async () => {
@@ -543,7 +565,7 @@ export default function AuctionCard({ config, products }: any) {
     setIsSaving(true);
     try {
       const response = await fetch("/api/auction-zones", {
-        method: "POST", // Use POST for creating a single new zone
+        method: "POST", 
         headers: {
           "Content-Type": "application/json",
         },
@@ -571,7 +593,6 @@ export default function AuctionCard({ config, products }: any) {
 
       const data = await response.json();
 
-      // Optionally replace the temp ID with the real one from server
       setAuctionZones((prev) =>
         prev.map((zone) =>
           zone.id === newZone.id ? { ...zone, id: data._id } : zone
@@ -591,7 +612,6 @@ export default function AuctionCard({ config, products }: any) {
 
   const handleClick = (e: React.MouseEvent) => {
     if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
-      // Open product URL in new tab
       window.open(hoveredZone.products.url, "_blank");
       return;
     } else if (hoveredZone) {
