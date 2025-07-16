@@ -41,7 +41,6 @@ export async function GET(request: Request) {
 
     const auctionWinMs = (config.auctionWinDays || 0) * 24 * 60 * 60 * 1000;;
     console.log("auctionWinMs :>> ", auctionWinMs);
-    // Determine the highest bidAmount for this zone
     const highestBidAmount = bids.length
       ? Math.max(...bids.map((b) => b.bidAmount))
       : 0;

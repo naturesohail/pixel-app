@@ -34,6 +34,8 @@ export default function AuctionCard({ config, products }: any) {
   const [buyNowPrice, setBuyNowPrice] = useState<number>(config?.oneTimePrice);
   const [viewX, setViewX] = useState(0);
   const [viewY, setViewY] = useState(0);
+  const [isOverlapping, setIsOverlapping] = useState(false); // New state for real-time overlap detection
+  
   const isAuthUser = !!user;
   const pixelSize = 12;
   const cols = 1000;
@@ -42,7 +44,29 @@ export default function AuctionCard({ config, products }: any) {
   const windowHeight = window.innerHeight || 1920;
   const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
   const productMap = useRef<Record<number, Product>>({});
-  console.log("auctionZones :>> ", auctionZones);
+  
+  // Helper function to check if a zone overlaps with existing zones
+  const isZoneOverlapping = useCallback((zone: AuctionZone, zones: AuctionZone[]): boolean => {
+    for (const existingZone of zones) {
+      // Skip self-comparison
+      if (existingZone.id === zone.id) continue;
+
+      const a = zone;
+      const b = existingZone;
+
+      const isOverlapping =
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y;
+
+      if (isOverlapping) {
+        return true;
+      }
+    }
+    return false;
+  }, []);
+
   useEffect(() => {
     if (config?.auctionZones) {
       setBuyNowPrice(config?.oneTimePrice);
@@ -53,7 +77,8 @@ export default function AuctionCard({ config, products }: any) {
           id: zone._id || `zone-${Date.now()}`,
           products: products.find((p: any) => p.zoneId === zone._id),
           isEmpty: zone.isEmpty || false,
-          status: zone.status || "active",
+          status: zone.status || "active" as const,
+
           auctionEndDate:
             zone.auctionEndDate ||
             new Date(
@@ -68,7 +93,6 @@ export default function AuctionCard({ config, products }: any) {
           }
           return true;
         });
-      console.log("zones :>> ", zones);
       setAuctionZones(zones);
       drawCanvas();
     }
@@ -89,10 +113,9 @@ export default function AuctionCard({ config, products }: any) {
           return zone;
         })
         .filter((zone) => {
-          // Remove zones that have been expired for more than 1 hour
           if (zone.status === "expired" && zone.auctionEndDate) {
             const expiredTime = new Date(zone.auctionEndDate).getTime();
-            return now.getTime() - expiredTime < 3600000; // 1 hour grace period
+            return now.getTime() - expiredTime < 3600000;
           }
           return true;
         });
@@ -100,34 +123,12 @@ export default function AuctionCard({ config, products }: any) {
       if (updatedZones.length !== auctionZones.length) {
         setAuctionZones(updatedZones);
       }
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [auctionZones]);
 
   const minBuyNowPrice = config?.oneTimePrice ?? 20;
-
-  const isAreaOverlapping = (zones: AuctionZone[]) => {
-    for (let i = 0; i < zones.length; i++) {
-      const a = zones[i];
-
-      for (let j = i + 1; j < zones.length; j++) {
-        const b = zones[j];
-
-        const isOverlapping =
-          a.x < b.x + b.width &&
-          a.x + a.width > b.x &&
-          a.y < b.y + b.height &&
-          a.y + a.height > b.y;
-
-        if (isOverlapping) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  };
 
   const findProductsInArea = useCallback(
     (x: number, y: number, width: number, height: number): Product[] => {
@@ -183,6 +184,7 @@ export default function AuctionCard({ config, products }: any) {
     dummyImg.src = img;
     imageCache.current[aId] = dummyImg;
   };
+  
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -194,11 +196,9 @@ export default function AuctionCard({ config, products }: any) {
     canvas.width = viewWidth;
     canvas.height = viewHeight;
 
-    // Draw white background
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid lines within view window
     ctx.strokeStyle = "#e0e0e0";
     ctx.lineWidth = 0.5;
     for (let col = viewX; col <= viewX + viewSize; col++) {
@@ -214,7 +214,6 @@ export default function AuctionCard({ config, products }: any) {
       ctx.stroke();
     }
 
-    // Draw auction zones in view
     auctionZones.forEach((zone) => {
       if (
         zone.x + zone.width >= viewX &&
@@ -295,12 +294,15 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
 
-    // Draw current selection in view
     if (isAuthUser && currentSelection) {
       const selX = (currentSelection.x - viewX) * pixelSize;
       const selY = (currentSelection.y - viewY) * pixelSize;
 
-      ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
+      // Change color based on overlap
+      ctx.fillStyle = isOverlapping 
+        ? "rgba(255, 0, 0, 0.3)" 
+        : "rgba(0, 100, 255, 0.3)";
+      
       ctx.fillRect(
         selX,
         selY,
@@ -308,7 +310,9 @@ export default function AuctionCard({ config, products }: any) {
         currentSelection.height * pixelSize
       );
 
-      ctx.strokeStyle = "#0064ff";
+      ctx.strokeStyle = isOverlapping 
+        ? "#ff0000" 
+        : "#0064ff";
       ctx.lineWidth = 2;
       ctx.strokeRect(
         selX,
@@ -318,7 +322,6 @@ export default function AuctionCard({ config, products }: any) {
       );
     }
 
-    // Draw products in view
     const renderedProductIds = new Set<string>();
     products?.forEach((product: any) => {
       if (
@@ -375,6 +378,7 @@ export default function AuctionCard({ config, products }: any) {
     currentSelection,
     viewX,
     viewY,
+    isOverlapping, // Add to dependencies
   ]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -387,6 +391,7 @@ export default function AuctionCard({ config, products }: any) {
     const y = Math.floor((e.clientY - rect.top) / pixelSize);
 
     setIsDragging(true);
+    setIsOverlapping(false); // Reset overlap state
     setDragStart({ x, y });
     setCurrentSelection({
       id: "temp-" + Date.now(),
@@ -396,7 +401,7 @@ export default function AuctionCard({ config, products }: any) {
       height: 1,
       products: [],
       isEmpty: true,
-      status: "active",
+      status: "active" as const, 
       totalPixels: 1,
       pixelPrice: pixelPrice,
       buyNowPrice: buyNowPrice,
@@ -426,7 +431,7 @@ export default function AuctionCard({ config, products }: any) {
       const isEmpty = isEmptyArea(startX, startY, width, height);
       const totalPixels = width * height;
 
-      setCurrentSelection({
+      const tempZone = {
         id: "temp-" + Date.now(),
         x: startX,
         y: startY,
@@ -434,17 +439,29 @@ export default function AuctionCard({ config, products }: any) {
         height,
         products: productsInArea,
         isEmpty,
-        status: "active",
+        status: "active" as const,
         totalPixels,
         pixelPrice: pixelPrice,
-      });
+        buyNowPrice: buyNowPrice
+      };
+      
+      // Check for overlap in real-time
+      const overlapping = isZoneOverlapping(tempZone, auctionZones);
+      setIsOverlapping(overlapping);
+      
+      if (overlapping) {
+        setError("This area overlaps with an existing auction zone");
+      } else {
+        setError(null);
+      }
+
+      setCurrentSelection(tempZone);
       return;
     }
 
     const x = Math.floor(mouseX / pixelSize);
     const y = Math.floor(mouseY / pixelSize);
 
-    // Check for product hover
     const product = productMap.current[y * cols + x];
     if (product) {
       setHoveredProduct(product);
@@ -470,14 +487,15 @@ export default function AuctionCard({ config, products }: any) {
       return;
     }
 
-    const { x, y, width, height } = currentSelection;
-
-    if (isAreaOverlapping(auctionZones)) {
+    // Prevent creation if overlapping
+    if (isOverlapping) {
       setError("This area overlaps with an existing auction zone");
       setIsDragging(false);
       setCurrentSelection(null);
       return;
     }
+
+    const { x, y, width, height } = currentSelection;
 
     const productsInArea = findProductsInArea(x, y, width, height);
     const isEmpty = isEmptyArea(x, y, width, height);
@@ -492,10 +510,8 @@ export default function AuctionCard({ config, products }: any) {
     setIsDragging(false);
     setShowAuctionModal(true);
   };
-  console.log("error :>> ", error);
 
   const confirmAuctionZone = () => {
-    console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
     if (!currentSelection) {
       setError("No area selected to add");
       return null;
@@ -517,7 +533,7 @@ export default function AuctionCard({ config, products }: any) {
       height,
       products,
       isEmpty,
-      status: "active",
+      status: "active" as const, // Fix: use 'as const' for literal type
       auctionEndDate,
       totalPixels,
       pixelPrice,
@@ -528,22 +544,23 @@ export default function AuctionCard({ config, products }: any) {
     setError(null);
     drawCanvas();
 
-    return newZone; // only return the new zone
+    return newZone;
   };
 
   const saveAuctionZones = async () => {
-    if (isAreaOverlapping(auctionZones)) {
-      alert("This area overlaps with an existing Zone");
-      return null;
-    }
-
     const newZone = confirmAuctionZone();
     if (!newZone) return;
 
+    // Final overlap check before saving
+    if (isZoneOverlapping(newZone, auctionZones)) {
+      setError("This area overlaps with an existing auction zone");
+      return;
+    }
+    
     setIsSaving(true);
     try {
       const response = await fetch("/api/auction-zones", {
-        method: "POST", // Use POST for creating a single new zone
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -571,7 +588,6 @@ export default function AuctionCard({ config, products }: any) {
 
       const data = await response.json();
 
-      // Optionally replace the temp ID with the real one from server
       setAuctionZones((prev) =>
         prev.map((zone) =>
           zone.id === newZone.id ? { ...zone, id: data._id } : zone
@@ -591,7 +607,6 @@ export default function AuctionCard({ config, products }: any) {
 
   const handleClick = (e: React.MouseEvent) => {
     if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
-      // Open product URL in new tab
       window.open(hoveredZone.products.url, "_blank");
       return;
     } else if (hoveredZone) {
@@ -604,7 +619,6 @@ export default function AuctionCard({ config, products }: any) {
         }
       } else {
         setShowAuctionModal(false);
-
         router.push(`/auctions/${hoveredZone.id}`);
       }
     }
@@ -678,9 +692,14 @@ export default function AuctionCard({ config, products }: any) {
               </div>
             </div>
 
+            {error && (
+              <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3">
+                {error}
+              </div>
+            )}
+
             {hoveredZone && (
               <div
-                // className="product-tooltip"
                 style={{
                   position: "fixed",
                   left: `${hoverPosition.x + 20}px`,
@@ -705,7 +724,7 @@ export default function AuctionCard({ config, products }: any) {
                 {hoveredZone.isEmpty && (
                   <>
                     <p>
-                      {}Size: {hoveredZone.width}x{hoveredZone.height} pixels
+                      Size: {hoveredZone.width}x{hoveredZone.height} pixels
                     </p>
                     <p>Total Pixels: {hoveredZone.totalPixels}</p>
                     <p>
@@ -813,37 +832,27 @@ export default function AuctionCard({ config, products }: any) {
                   />
                 </div>{" "}
                 <div className="mb-3">
-  <label className="form-label">Instant Buy Prices ($)</label>
-  <input
-    type="number"
-    className="form-control"
-    step="0.01"
-    min={minBuyNowPrice}
-    placeholder={`Minimum $${minBuyNowPrice.toFixed(2)}`}
-    value={buyNowPrice}
-    onChange={(e) => {
-      const newValue = parseFloat(e.target.value);
-      setBuyNowPrice(
-        isNaN(newValue)
-          ? minBuyNowPrice
-          : Math.max(minBuyNowPrice, newValue)
-      );
-    }}
-  />
-  <small className="text-muted">
-    Minimum price: ${minBuyNowPrice.toFixed(2)}
-  </small>
-</div>
-                {/* In the display section */}
-                <p>
-                  Instant Buy Price: $
-                  {Math.max(
-                    config?.oneTimePrice || 20,
-                    currentSelection.width *
-                      currentSelection.height *
-                      buyNowPrice
-                  ).toFixed(2)}
-                </p>
+                  <label className="form-label">Instant Buy Prices ($)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    step="0.01"
+                    min={minBuyNowPrice}
+                    placeholder={`Minimum $${minBuyNowPrice.toFixed(2)}`}
+                    value={buyNowPrice}
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      setBuyNowPrice(
+                        isNaN(newValue)
+                          ? minBuyNowPrice
+                          : Math.max(minBuyNowPrice, newValue)
+                      );
+                    }}
+                  />
+                  <small className="text-muted">
+                    Minimum price: ${minBuyNowPrice.toFixed(2)}
+                  </small>
+                </div>
                 <div className="alert alert-info">
                   <p>
                     <strong>Zone Details:</strong>
@@ -913,7 +922,6 @@ export default function AuctionCard({ config, products }: any) {
                     setAuctionZones((prev: any) => {
                       return prev.filter((item: any) => {
                         setShowAuctionModal(false);
-
                         return item.id != currentSelection.id;
                       });
                     });
@@ -927,11 +935,10 @@ export default function AuctionCard({ config, products }: any) {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => {
-                    saveAuctionZones();
-                  }}
+                  onClick={saveAuctionZones}
+                  disabled={isOverlapping || isSaving}
                 >
-                  Create Auction Zone
+                  {isSaving ? "Saving..." : "Create Auction Zone"}
                 </button>
               </div>
             </div>
