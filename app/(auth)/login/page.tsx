@@ -39,7 +39,6 @@ export default function Login() {
         throw new Error("Your account has been disabled. Please contact support.");
       }
 
-      // Update AuthContext state immediately
       login(data.user);
 
       Swal.fire({
