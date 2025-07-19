@@ -98,7 +98,7 @@ const MiniMap: React.FC<Props> = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent scroll
     if (!dragStart) return;
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();

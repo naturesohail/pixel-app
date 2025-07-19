@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { Product } from "../types/productTypes";
 import { AuctionZone } from "../types/AuctionZoneTypes";
-import MiniMap from "../(frontend)/test/MiniMap";
 
 export default function AuctionCard({ config, products }: any) {
   const router = useRouter();
@@ -14,18 +13,12 @@ export default function AuctionCard({ config, products }: any) {
   const [hoveredZone, setHoveredZone] = useState<any | null>(null);
   const [hoveredProduct, setHoveredProduct] = useState<Product | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(
-    new Set()
-  );
+  const [renderedProducts, setRenderedProducts] = useState<Set<string>>(new Set());
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
   const [auctionZones, setAuctionZones] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
-    null
-  );
-  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(
-    null
-  );
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [currentSelection, setCurrentSelection] = useState<AuctionZone | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(7);
@@ -34,15 +27,43 @@ export default function AuctionCard({ config, products }: any) {
   const [buyNowPrice, setBuyNowPrice] = useState<number>(config?.oneTimePrice);
   const [viewX, setViewX] = useState(0);
   const [viewY, setViewY] = useState(0);
+  const [showOverlapAlert, setShowOverlapAlert] = useState(false);
   const isAuthUser = !!user;
   const pixelSize = 12;
-  const cols = 1000;
+  const cols = 10000;
   const rows = 1000;
   const windowWidth = window.innerWidth || 1366;
   const windowHeight = window.innerHeight || 1920;
   const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
   const productMap = useRef<Record<number, Product>>({});
-  console.log("auctionZones :>> ", auctionZones);
+
+  // Improved overlap detection
+  const isAreaOverlapping = useCallback(
+    (x: number, y: number, width: number, height: number): boolean => {
+      for (const zone of auctionZones) {
+        const isOverlapping =
+          x < zone.x + zone.width &&
+          x + width > zone.x &&
+          y < zone.y + zone.height &&
+          y + height > zone.y;
+
+        if (isOverlapping) {
+          return true;
+        }
+      }
+      return false;
+    },
+    [auctionZones]
+  );
+
+  // Show overlap alert and hide after delay
+  const showOverlapWarning = useCallback(() => {
+    if (!showOverlapAlert) {
+      setShowOverlapAlert(true);
+      setTimeout(() => setShowOverlapAlert(false), 2000);
+    }
+  }, [showOverlapAlert]);
+
   useEffect(() => {
     if (config?.auctionZones) {
       setBuyNowPrice(config?.oneTimePrice);
@@ -68,7 +89,6 @@ export default function AuctionCard({ config, products }: any) {
           }
           return true;
         });
-      console.log("zones :>> ", zones);
       setAuctionZones(zones);
       drawCanvas();
     }
@@ -89,10 +109,9 @@ export default function AuctionCard({ config, products }: any) {
           return zone;
         })
         .filter((zone) => {
-          // Remove zones that have been expired for more than 1 hour
           if (zone.status === "expired" && zone.auctionEndDate) {
             const expiredTime = new Date(zone.auctionEndDate).getTime();
-            return now.getTime() - expiredTime < 3600000; // 1 hour grace period
+            return now.getTime() - expiredTime < 3600000;
           }
           return true;
         });
@@ -100,34 +119,12 @@ export default function AuctionCard({ config, products }: any) {
       if (updatedZones.length !== auctionZones.length) {
         setAuctionZones(updatedZones);
       }
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [auctionZones]);
 
   const minBuyNowPrice = config?.oneTimePrice ?? 20;
-
-  const isAreaOverlapping = (zones: AuctionZone[]) => {
-    for (let i = 0; i < zones.length; i++) {
-      const a = zones[i];
-
-      for (let j = i + 1; j < zones.length; j++) {
-        const b = zones[j];
-
-        const isOverlapping =
-          a.x < b.x + b.width &&
-          a.x + a.width > b.x &&
-          a.y < b.y + b.height &&
-          a.y + a.height > b.y;
-
-        if (isOverlapping) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  };
 
   const findProductsInArea = useCallback(
     (x: number, y: number, width: number, height: number): Product[] => {
@@ -183,6 +180,7 @@ export default function AuctionCard({ config, products }: any) {
     dummyImg.src = img;
     imageCache.current[aId] = dummyImg;
   };
+
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -214,6 +212,7 @@ export default function AuctionCard({ config, products }: any) {
       ctx.stroke();
     }
 
+    // Draw auction zones in view
     auctionZones.forEach((zone) => {
       if (
         zone.x + zone.width >= viewX &&
@@ -294,52 +293,45 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
 
+    // Draw current selection in view
     if (isAuthUser && currentSelection) {
-  const selX = (currentSelection.x - viewX) * pixelSize;
-  const selY = (currentSelection.y - viewY) * pixelSize;
+      const selX = (currentSelection.x - viewX) * pixelSize;
+      const selY = (currentSelection.y - viewY) * pixelSize;
 
-  const tempZone = {
-    ...currentSelection,
-    id: "check-temp-overlap",
-  };
+      // Check if current selection overlaps with any existing zone
+      const isOverlapping = isAreaOverlapping(
+        currentSelection.x,
+        currentSelection.y,
+        currentSelection.width,
+        currentSelection.height
+      );
 
-  const zonesToCheck = [...auctionZones, tempZone];
+      ctx.fillStyle = isOverlapping
+        ? "rgba(255, 0, 0, 0.3)"
+        : "rgba(0, 100, 255, 0.3)";
+      ctx.fillRect(
+        selX,
+        selY,
+        currentSelection.width * pixelSize,
+        currentSelection.height * pixelSize
+      );
 
-  const hasOverlap = isAreaOverlapping(zonesToCheck) && isDragging;
+      ctx.strokeStyle = isOverlapping ? "#ff0000" : "#0064ff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(
+        selX,
+        selY,
+        currentSelection.width * pixelSize,
+        currentSelection.height * pixelSize
+      );
 
-  // Use red fill if overlapping
-  ctx.fillStyle = hasOverlap
-    ? "rgba(255, 0, 0, 0.3)"
-    : "rgba(0, 100, 255, 0.3)";
-  ctx.fillRect(
-    selX,
-    selY,
-    currentSelection.width * pixelSize,
-    currentSelection.height * pixelSize
-  );
+      // Show alert if overlapping during drag
+      if (isDragging && isOverlapping) {
+        showOverlapWarning();
+      }
+    }
 
-  ctx.strokeStyle = hasOverlap ? "#ff0000" : "#0064ff";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(
-    selX,
-    selY,
-    currentSelection.width * pixelSize,
-    currentSelection.height * pixelSize
-  );
-
- if (hasOverlap) {
-  setShowAuctionModal(false);
-  setIsDragging(false);
-  setTimeout(() => {
-    setCurrentSelection(null);
-  }, 1000);
-  alert('zone is overlaping')
-
-}
-
-}
-
-
+    // Draw products in view
     const renderedProductIds = new Set<string>();
     products?.forEach((product: any) => {
       if (
@@ -396,6 +388,9 @@ export default function AuctionCard({ config, products }: any) {
     currentSelection,
     viewX,
     viewY,
+    isAreaOverlapping,
+    isDragging,
+    showOverlapWarning,
   ]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -423,6 +418,7 @@ export default function AuctionCard({ config, products }: any) {
       buyNowPrice: buyNowPrice,
     });
     setError(null);
+    setShowOverlapAlert(false);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -493,10 +489,12 @@ export default function AuctionCard({ config, products }: any) {
 
     const { x, y, width, height } = currentSelection;
 
-    if (isAreaOverlapping(auctionZones)) {
+    // Check for overlapping immediately
+    if (isAreaOverlapping(x, y, width, height)) {
       setError("This area overlaps with an existing auction zone");
       setIsDragging(false);
       setCurrentSelection(null);
+      drawCanvas();
       return;
     }
 
@@ -513,16 +511,20 @@ export default function AuctionCard({ config, products }: any) {
     setIsDragging(false);
     setShowAuctionModal(true);
   };
-  console.log("error :>> ", error);
 
   const confirmAuctionZone = () => {
-    console.log("buyNowPrice 88:>> ", currentSelection, buyNowPrice);
     if (!currentSelection) {
       setError("No area selected to add");
       return null;
     }
 
-    const { x, y, width, height, isEmpty, products } = currentSelection;
+    const { x, y, width, height } = currentSelection;
+
+    // Double-check for overlaps before confirming
+    if (isAreaOverlapping(x, y, width, height)) {
+      setError("This area overlaps with an existing auction zone");
+      return null;
+    }
 
     const auctionEndDate = new Date(
       Date.now() + auctionDuration * 24 * 60 * 60 * 1000
@@ -536,8 +538,8 @@ export default function AuctionCard({ config, products }: any) {
       y,
       width,
       height,
-      products,
-      isEmpty,
+      products: currentSelection.products,
+      isEmpty: currentSelection.isEmpty,
       status: "active",
       auctionEndDate,
       totalPixels,
@@ -549,13 +551,16 @@ export default function AuctionCard({ config, products }: any) {
     setError(null);
     drawCanvas();
 
-    return newZone; 
+    return newZone;
   };
 
   const saveAuctionZones = async () => {
-    if (isAreaOverlapping(auctionZones)) {
-      alert("This area overlaps with an existing Zone");
-      return null;
+    if (!currentSelection) return;
+
+    const { x, y, width, height } = currentSelection;
+    if (isAreaOverlapping(x, y, width, height)) {
+      setError("This area overlaps with an existing Zone");
+      return;
     }
 
     const newZone = confirmAuctionZone();
@@ -564,7 +569,7 @@ export default function AuctionCard({ config, products }: any) {
     setIsSaving(true);
     try {
       const response = await fetch("/api/auction-zones", {
-        method: "POST", 
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -623,7 +628,6 @@ export default function AuctionCard({ config, products }: any) {
         }
       } else {
         setShowAuctionModal(false);
-
         router.push(`/auctions/${hoveredZone.id}`);
       }
     }
@@ -653,6 +657,27 @@ export default function AuctionCard({ config, products }: any) {
       <div className="card million-dollar-style">
         <div className="card-body">
           <div className="position-relative">
+            {/* Overlap Alert */}
+            {showOverlapAlert && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: "20px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  backgroundColor: "#ff4444",
+                  color: "white",
+                  padding: "10px 20px",
+                  borderRadius: "5px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                  zIndex: 2000,
+                  animation: "fadeInOut 2s ease-in-out",
+                }}
+              >
+                Warning: This area overlaps with an existing zone!
+              </div>
+            )}
+
             <div
               ref={containerRef}
               style={{
@@ -668,15 +693,7 @@ export default function AuctionCard({ config, products }: any) {
                   bottom: 0,
                 }}
               >
-                <MiniMap
-                  data={auctionZones}
-                  fullSize={1000}
-                  viewSize={viewSize}
-                  onViewChange={(x, y) => {
-                    setViewX(x);
-                    setViewY(y);
-                  }}
-                />
+               
               </div>
               <div>
                 <canvas
@@ -699,7 +716,6 @@ export default function AuctionCard({ config, products }: any) {
 
             {hoveredZone && (
               <div
-                // className="product-tooltip"
                 style={{
                   position: "fixed",
                   left: `${hoverPosition.x + 20}px`,
@@ -724,7 +740,7 @@ export default function AuctionCard({ config, products }: any) {
                 {hoveredZone.isEmpty && (
                   <>
                     <p>
-                      {}Size: {hoveredZone.width}x{hoveredZone.height} pixels
+                      Size: {hoveredZone.width}x{hoveredZone.height} pixels
                     </p>
                     <p>Total Pixels: {hoveredZone.totalPixels}</p>
                     <p>
@@ -733,7 +749,6 @@ export default function AuctionCard({ config, products }: any) {
                     <p>Status: {hoveredZone.status.toUpperCase()}</p>
                     {hoveredZone.auctionEndDate && (
                       <p>
-                        {" "}
                         Ends:{" "}
                         {new Date(
                           hoveredZone.auctionEndDate
@@ -742,7 +757,6 @@ export default function AuctionCard({ config, products }: any) {
                     )}
                     {hoveredZone.buyNowPrice && (
                       <p>
-                        {" "}
                         Buy Now Price: ${" "}
                         {hoveredZone.buyNowPrice <= 1
                           ? ""
@@ -777,211 +791,229 @@ export default function AuctionCard({ config, products }: any) {
         </div>
       </div>
 
-     {showAuctionModal && currentSelection && (
-  <div
-    className="modal show"
-    style={{
-      display: "block",
-      backgroundColor: "rgba(0,0,0,0.5)",
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 1050,
-      overflow: "auto",
-    }}
-  >
-    <div 
-      className="modal-dialog modal-dialog-centered modal-lg"
-      style={{ 
-        maxWidth: "40vw",
-        margin: "1.75rem auto",
-      }}
-    >
-      <div 
-        className="modal-content"
-        style={{
-          maxHeight: "90vh",
-          overflow: "hidden",
-          boxShadow: "0 0.5rem 1rem rgba(0, 0, 0, 0.15)",
-        }}
-      >
-        <div className="modal-header bg-primary text-white">
-          <h5 className="modal-title">Create Auction Zone</h5>
-          <button
-            type="button"
-            className="btn-close btn-close-white"
-            onClick={() => {
-              setShowAuctionModal(false);
-              setCurrentSelection(null);
-            }}
-            aria-label="Close"
-          />
-        </div>
-        
-        <div 
-          className="modal-body"
-          style={{ 
-            overflowY: "auto",
-            padding: "20px",
+      {showAuctionModal && currentSelection && (
+        <div
+          className="modal show"
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+            overflow: "auto",
           }}
         >
-          <div className="row">
-                   <div className="col-md-6 gap-4 mb-6">
-          {/* Auction Duration */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Auction Duration (Days)
-            </label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              value={auctionDuration}
-              onChange={(e) => setAuctionDuration(Number(e.target.value))}
+          <div
+            className="modal-dialog modal-dialog-centered modal-lg"
+            style={{
+              maxWidth: "40vw",
+              margin: "1.75rem auto",
+            }}
+          >
+            <div
+              className="modal-content"
+              style={{
+                maxHeight: "90vh",
+                overflow: "hidden",
+                boxShadow: "0 0.5rem 1rem rgba(0, 0, 0, 0.15)",
+              }}
             >
-              
-              <option value="7" >7 Days</option>
-            </select>
-          </div>
-          
-          {/* Empty space to balance grid */}
-          <div></div>
-</div>
-            
-            <div className="col-md-6 mb-3">
-              <label className="form-label fw-bold">Bid Price Per Pixel ($)</label>
-              <input
-                type="number"
-                className="form-control"
-                min="0.01"
-                step="0.01"
-                value={pixelPrice <= 0 ? "" : pixelPrice}
-                onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
-                placeholder="Enter price per pixel"
-              />
-              <small className="text-muted">Price per pixel for bids</small>
-            </div>
-            
-            <div className="col-md-6 mb-3">
-              <label className="form-label fw-bold">Instant Buy Price Per Pixel ($)</label>
-              <input
-                type="number"
-                className="form-control"
-                step="0.01"
-                min={minBuyNowPrice}
-                placeholder={`Min $${minBuyNowPrice.toFixed(2)} per pixel`}
-                value={buyNowPrice}
-                onChange={(e) => {
-                  const newValue = parseFloat(e.target.value);
-                  setBuyNowPrice(
-                    isNaN(newValue)
-                      ? minBuyNowPrice
-                      : Math.max(minBuyNowPrice, newValue)
-                  );
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">Create Auction Zone</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => {
+                    setShowAuctionModal(false);
+                    setCurrentSelection(null);
+                  }}
+                  aria-label="Close"
+                />
+              </div>
+
+              <div
+                className="modal-body"
+                style={{
+                  overflowY: "auto",
+                  padding: "20px",
                 }}
-              />
-              <small className="text-muted">
-                Minimum price per pixel: ${minBuyNowPrice.toFixed(2)}
-              </small>
-            </div>
-            
-            <div className="col-md-6 mb-3 d-flex align-items-end">
-              <div className="w-100">
-                <p className="mb-1 fw-bold">Total Pixels:</p>
-                <div className="alert alert-secondary py-2 mb-0">
-                  {currentSelection.width * currentSelection.height} pixels
+              >
+                {error && (
+                  <div className="alert alert-danger mt-3">
+                    <strong>Error:</strong> {error}
+                  </div>
+                )}
+
+                <div className="row">
+                  <div className="col-md-6 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Auction Duration (Days)
+                      </label>
+                      <select
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        value={auctionDuration}
+                        onChange={(e) => setAuctionDuration(Number(e.target.value))}
+                      >
+                        <option value="7">7 Days</option>
+                      </select>
+                    </div>
+                    <div></div>
+                  </div>
+
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-bold">
+                      Bid Price Per Pixel ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min="0.01"
+                      step="0.01"
+                      value={pixelPrice <= 0 ? "" : pixelPrice}
+                      onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
+                      placeholder="Enter price per pixel"
+                    />
+                    <small className="text-muted">
+                      Price per pixel for bids
+                    </small>
+                  </div>
+
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-bold">
+                      Instant Buy Price Per Pixel ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      step="0.01"
+                      min={minBuyNowPrice}
+                      placeholder={`Min $${minBuyNowPrice.toFixed(2)} per pixel`}
+                      value={buyNowPrice}
+                      onChange={(e) => {
+                        const newValue = parseFloat(e.target.value);
+                        setBuyNowPrice(
+                          isNaN(newValue)
+                            ? minBuyNowPrice
+                            : Math.max(minBuyNowPrice, newValue)
+                        );
+                      }}
+                    />
+                    <small className="text-muted">
+                      Minimum price per pixel: ${minBuyNowPrice.toFixed(2)}
+                    </small>
+                  </div>
+
+                  <div className="col-md-6 mb-3 d-flex align-items-end">
+                    <div className="w-100">
+                      <p className="mb-1 fw-bold">Total Pixels:</p>
+                      <div className="alert alert-secondary py-2 mb-0">
+                        {currentSelection.width * currentSelection.height} pixels
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="alert alert-info mt-3">
+                  <h6 className="fw-bold mb-3">Zone Details</h6>
+
+                  <div className="row">
+                    <div className="col-sm-4 mb-2">
+                      <p className="mb-0 fw-medium">Size:</p>
+                      <p className="mb-0">
+                        {currentSelection.width}x{currentSelection.height}{" "}
+                        pixels
+                      </p>
+                    </div>
+
+                    <div className="col-sm-4 mb-2">
+                      <p className="mb-0 fw-medium">Position:</p>
+                      <p className="mb-0">
+                        ({currentSelection.x}, {currentSelection.y})
+                      </p>
+                    </div>
+
+                    <div className="col-sm-4 mb-2">
+                      <p className="mb-0 fw-medium">Base Price:</p>
+                      <p className="mb-0">
+                        $
+                        {(
+                          currentSelection.width *
+                          currentSelection.height *
+                          pixelPrice
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+
+                    <div className="col-sm-4 mb-2">
+                      <p className="mb-0 fw-medium">Instant Buy Price:</p>
+                      <p className="mb-0">
+                        $
+                        {(
+                          currentSelection.width *
+                          currentSelection.height *
+                          buyNowPrice
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!currentSelection.isEmpty && (
+                    <div className="mt-3">
+                      <p className="mb-1 fw-medium">
+                        Contains {currentSelection.products.length} product(s):
+                      </p>
+                      <ul className="mb-2">
+                        {currentSelection.products.map((product) => (
+                          <li key={product._id}>
+                            {product.title} - $
+                            {product.price?.toFixed(2) || "0.00"}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mb-0 fw-medium">
+                        Total Products Value: $
+                        {currentSelection.products
+                          .reduce((sum, p) => sum + (p.price || 0), 0)
+                          .toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <div className="alert alert-info mt-3">
-            <h6 className="fw-bold mb-3">Zone Details</h6>
-            
-            <div className="row">
-              <div className="col-sm-4 mb-2">
-                <p className="mb-0 fw-medium">Size:</p>
-                <p className="mb-0">{currentSelection.width}x{currentSelection.height} pixels</p>
-              </div>
-              
-              <div className="col-sm-4 mb-2">
-                <p className="mb-0 fw-medium">Position:</p>
-                <p className="mb-0">({currentSelection.x}, {currentSelection.y})</p>
-              </div>
-              
-              <div className="col-sm-4 mb-2">
-                <p className="mb-0 fw-medium">Base Price:</p>
-                <p className="mb-0">$
-                  {(
-                    currentSelection.width *
-                    currentSelection.height *
-                    pixelPrice
-                  ).toFixed(2)}
-                </p>
-              </div>
-              
-              <div className="col-sm-4 mb-2">
-                <p className="mb-0 fw-medium">Instant Buy Price:</p>
-                <p className="mb-0">$
-                  {(
-                    currentSelection.width *
-                    currentSelection.height *
-                    buyNowPrice
-                  ).toFixed(2)}
-                </p>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowAuctionModal(false);
+                    setCurrentSelection(null);
+                    setError(null);
+                    drawCanvas();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    saveAuctionZones();
+                  }}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Creating..." : "Create Auction Zone"}
+                </button>
               </div>
             </div>
-            
-            {!currentSelection.isEmpty && (
-              <div className="mt-3">
-                <p className="mb-1 fw-medium">
-                  Contains {currentSelection.products.length} product(s):
-                </p>
-                <ul className="mb-2">
-                  {currentSelection.products.map((product) => (
-                    <li key={product._id}>
-                      {product.title} - ${product.price?.toFixed(2) || "0.00"}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mb-0 fw-medium">
-                  Total Products Value: $
-                  {currentSelection.products
-                    .reduce((sum, p) => sum + (p.price || 0), 0)
-                    .toFixed(2)}
-                </p>
-              </div>
-            )}
           </div>
         </div>
-        
-        <div className="modal-footer">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              setShowAuctionModal(false);
-              setCurrentSelection(null);
-              setError(null);
-              drawCanvas();
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              saveAuctionZones();
-            }}
-          >
-            Create Auction Zone
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 }
+
