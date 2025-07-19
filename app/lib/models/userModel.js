@@ -11,8 +11,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      lowercase: true, 
-      trim: true, 
+      lowercase: true,
+      trim: true,
     },
     phone: {
       type: String,
@@ -22,17 +22,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-   
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
     },
-
-    isAdmin:{
+    isAdmin: {
       type: Boolean,
-      default: false
-
-    }
+      default: false,
+    },
+    resetToken: {
+      type: String,
+    },
+    resetTokenExpiry: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
