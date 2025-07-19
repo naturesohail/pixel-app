@@ -305,7 +305,7 @@ export default function AuctionCard({ config, products }: any) {
 
   const zonesToCheck = [...auctionZones, tempZone];
 
-  const hasOverlap = isAreaOverlapping(zonesToCheck);
+  const hasOverlap = isAreaOverlapping(zonesToCheck) && isDragging;
 
   // Use red fill if overlapping
   ctx.fillStyle = hasOverlap
@@ -330,11 +330,10 @@ export default function AuctionCard({ config, products }: any) {
  if (hasOverlap) {
   setShowAuctionModal(false);
   setIsDragging(false);
-  // return; 
-
   setTimeout(() => {
     setCurrentSelection(null);
   }, 1000);
+  alert('zone is overlaping')
 
 }
 

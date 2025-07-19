@@ -98,7 +98,7 @@ const MiniMap: React.FC<Props> = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault(); // Prevent scroll
+    e.preventDefault();
     if (!dragStart) return;
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();
@@ -116,7 +116,7 @@ const MiniMap: React.FC<Props> = ({
         border: "1px solid #000",
         cursor: "grab",
         touchAction: "none",
-        maxWidth: "80%",
+        maxWidth: "100%",
         height: "auto",
       }}
       onClick={handleClick}
