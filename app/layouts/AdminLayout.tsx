@@ -2,7 +2,7 @@
 "use client"
 import type { Metadata } from "next";
 import Sidebar from "../components/admin/Sidebar";
-import "../globals.css"; // Use separate admin styles
+import "../globals.css";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",

@@ -37,7 +37,6 @@ export default function AuctionCard({ config, products }: any) {
   const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
   const productMap = useRef<Record<number, Product>>({});
 
-  // Improved overlap detection
   const isAreaOverlapping = useCallback(
     (x: number, y: number, width: number, height: number): boolean => {
       for (const zone of auctionZones) {
@@ -56,7 +55,6 @@ export default function AuctionCard({ config, products }: any) {
     [auctionZones]
   );
 
-  // Show overlap alert and hide after delay
   const showOverlapWarning = useCallback(() => {
     if (!showOverlapAlert) {
       setShowOverlapAlert(true);
@@ -489,7 +487,6 @@ export default function AuctionCard({ config, products }: any) {
 
     const { x, y, width, height } = currentSelection;
 
-    // Check for overlapping immediately
     if (isAreaOverlapping(x, y, width, height)) {
       setError("This area overlaps with an existing auction zone");
       setIsDragging(false);
@@ -520,7 +517,6 @@ export default function AuctionCard({ config, products }: any) {
 
     const { x, y, width, height } = currentSelection;
 
-    // Double-check for overlaps before confirming
     if (isAreaOverlapping(x, y, width, height)) {
       setError("This area overlaps with an existing auction zone");
       return null;
@@ -657,7 +653,6 @@ export default function AuctionCard({ config, products }: any) {
       <div className="card million-dollar-style">
         <div className="card-body">
           <div className="position-relative">
-            {/* Overlap Alert */}
             {showOverlapAlert && (
               <div
                 style={{
@@ -683,7 +678,7 @@ export default function AuctionCard({ config, products }: any) {
               style={{
                 overflowY: "auto",
                 maxHeight: "70vh",
-                paddingBottom: 210,
+                paddingBottom: 0,
               }}
             >
               <div
@@ -1013,6 +1008,7 @@ export default function AuctionCard({ config, products }: any) {
           </div>
         </div>
       )}
+      
     </div>
   );
 }

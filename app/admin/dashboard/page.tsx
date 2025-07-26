@@ -18,18 +18,19 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+
         // Replace with your actual API call
         // const res = await fetch('/api/dashboard');
         // const data = await res.json();
-        
         // Mock data
+       
         const mockData = {
           totalProducts: 156,
           activeBids: 89,
           totalUsers: 2345,
           revenue: 12500
         };
-        
+
         setData(mockData);
       } catch (error) {
         console.error("Failed to load data:", error);

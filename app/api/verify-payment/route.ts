@@ -172,13 +172,11 @@ export async function POST(request: Request) {
     const config = await PixelConfig.findOne().sort({ createdAt: -1 }).session(dbSession);
     if (!config) throw new Error("Pixel config not found");
 
-    // Allocate pixels
     const availablePixels = config.auctionZones.flatMap((zone: any) => zone.pixelIndices || []);
     const usedPixels = (await Product.find({ status: "active" })).flatMap(p => p.pixelIndices || []);
     const allocatablePixels = availablePixels.filter((p:any) => !usedPixels.includes(p));
     const allocatedPixels = allocatablePixels.slice(0, pixelCount);
 
-    // Create Product
     const [product] = await Product.create([{
       title,
       price: totalPrice,
@@ -196,7 +194,6 @@ export async function POST(request: Request) {
       pixelIndex: allocatedPixels[0],
     }], { session: dbSession });
 
-    // Create Transaction record
     const transaction=await Transaction.create([{
       userId: new Types.ObjectId(userId),
       productId: product._id,
@@ -206,7 +203,6 @@ export async function POST(request: Request) {
       stripeSessionId: sessionId,
     }], { session: dbSession });
 
-    // Update zone
     await PixelConfig.updateOne(
       {},
       {

@@ -22,7 +22,7 @@ export default function Auth() {
       const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
 
       if (adminRoutes.includes(pathname) && !isAuthenticated) {
-        router.replace("/login"); // Use `replace` instead of `push`
+        router.replace("/login"); 
       }
     }
 
@@ -31,5 +31,5 @@ export default function Auth() {
 
   if (isLoading) return <Spinner />;
 
-  return null; // No need to render anything once auth is checked
+  return null; 
 }

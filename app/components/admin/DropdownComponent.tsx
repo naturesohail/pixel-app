@@ -9,10 +9,8 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ buttonContent, children }) 
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Toggle menu visibility
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {

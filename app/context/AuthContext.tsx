@@ -48,7 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       const localUser = localStorage.getItem("userData");
 
-      // If we have user data in localStorage, use it and don't call the API
       if (localUser) {
         try {
           const parsedUser = JSON.parse(localUser);

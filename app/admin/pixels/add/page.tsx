@@ -1,4 +1,3 @@
-// AddPixel.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,14 +9,13 @@ export default function AddPixel() {
   const [pricePerPixel, setPricePerPixel] = useState('');
   const [oneTimePrice, setOneTimePrice] = useState('');
   const [totalPixels, setTotalPixels] = useState('');
-  const [minimumOrderQuantity, setMinimumOrderQuantity] = useState('1'); // New state
-  const [auctionWinDays, setAuctionWinDays] = useState('2'); // New state
+  const [minimumOrderQuantity, setMinimumOrderQuantity] = useState('1'); 
+  const [auctionWinDays, setAuctionWinDays] = useState('2');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
   const [currentConfig, setCurrentConfig] = useState<any>(null);
   const router = useRouter();
 
-  // Fetch current config on mount
   useEffect(() => {
     const fetchCurrentConfig = async () => {
       try {
@@ -51,8 +49,8 @@ export default function AddPixel() {
           pricePerPixel: parseFloat(pricePerPixel),
           oneTimePrice: parseFloat(oneTimePrice),
           totalPixels: parseInt(totalPixels),
-          minimumOrderQuantity: parseInt(minimumOrderQuantity), // New field
-          auctionWinDays: parseInt(auctionWinDays) // New field
+          minimumOrderQuantity: parseInt(minimumOrderQuantity), 
+          auctionWinDays: parseInt(auctionWinDays) 
         }),
       });
 

@@ -19,17 +19,15 @@ export async function GET() {
       );
     }
 
-    // Filter out expired zones (more than 1 hour past expiry)
     const now = new Date();
     const validZones = config.auctionZones.filter((zone: any) => {
       if (zone.expiryDate) {
         const expiryTime = new Date(zone.expiryDate).getTime();
-        return now.getTime() - expiryTime < 3600000; // 1 hour grace period
+        return now.getTime() - expiryTime < 3600000; 
       }
       return true;
     });
 
-    // If any zones were filtered out, update the config
     if (validZones.length !== config.auctionZones.length) {
       config.auctionZones = validZones;
       await config.save();
