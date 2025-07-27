@@ -299,9 +299,9 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
                     }}
                   />
                   <div className="text-center mt-2">
-                    <small>
+                    {/* <small>
                       Selected: {pixelCount} pixel{pixelCount !== 1 ? "s" : ""}
-                    </small>
+                    </small> */}
                   </div>
                 </div>
               </div>

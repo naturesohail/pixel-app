@@ -302,9 +302,9 @@ useEffect(() => {
                     }}
                   />
                   <div className="text-center mt-2">
-                    <small>
+                    {/* <small>
                       Selected: {pixelCount} pixel{pixelCount !== 1 ? "s" : ""}
-                    </small>
+                    </small> */}
                   </div>
                 </div>
               </div>
