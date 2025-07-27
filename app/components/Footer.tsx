@@ -3,11 +3,7 @@ import Link from "next/link";
 
 export default function Page() {
     return (
-        <div style={{
-            display: "flex",
-            flexDirection: "column",
-            minHeight: "60vh",
-        }}>
+        <div>
             <main style={{ flex: 1 }}>
             </main>
 

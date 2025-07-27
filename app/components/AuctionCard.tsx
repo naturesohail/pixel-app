@@ -677,7 +677,7 @@ export default function AuctionCard({ config, products }: any) {
               ref={containerRef}
               style={{
                 overflowY: "auto",
-                maxHeight: "70vh",
+                maxHeight: "90vh",
                 paddingBottom: 0,
               }}
             >

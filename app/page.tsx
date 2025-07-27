@@ -98,11 +98,11 @@ export default function HomePage() {
   return (
     <FrontendLayout>
       <Header />
-      <div className="main-banner" id="top">
+      <div className="main-banner" id="top" style={{paddingBottom: "0px", paddingLeft: "0px", paddingRight: "0px"}}>
         <div className="container-fluid">
           <div className="row">
             <div className="col-lg-12">
-              <div className="container">
+              <div className="container-fluid">
                 {loading ? (
                   <Spinner />
                 ) : pixelData ? (

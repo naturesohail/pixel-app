@@ -701,9 +701,9 @@ banner
 */
 
 .main-banner {
-  border-bottom: 3px dotted #eee;
+  border-bottom: 1px dotted #eee;
   padding-top: 110px;
-  padding-bottom: 30px;
+  padding-bottom: 0px;
 }
 
 .main-banner .left-content .thumb img {

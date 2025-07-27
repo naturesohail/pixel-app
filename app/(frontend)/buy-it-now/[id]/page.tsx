@@ -79,7 +79,6 @@ export default function BuyItNowPage() {
   }, []);
 
 
-// console.log('activeAuctionZone :>> ', activeAuctionZone);
  
 useEffect(() => {
     if (userId === null && typeof window !== "undefined") return;
