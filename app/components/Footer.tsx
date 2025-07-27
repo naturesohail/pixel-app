@@ -22,23 +22,15 @@ export default function Page() {
                         <div className="col-lg-6">
                             <div className="first-item">
                                 <div className="logo">
-                                    <span style={{ color: "white" }}>MDC</span>
+                                    <span style={{ color: "white" }}>AI OF THE WORLD</span>
                                 </div>
                                 <ul>
 
                                     <li>
-                                        <a href="#">16501 Collins Ave, Sunny Isles Beach, FL 33160, United States</a>
+                                        <a href="#">Developed by Data App LLC admin@aioftheworld.com </a>
                                     </li>
-                                    <li>
-                                        <a href="#">hexashop@company.com</a>
-                                    </li>
-                                    <li>
-                                        <a href="#">010-020-0340</a>
-                                    </li>
-                                    <li>
-                                        Last updated: {new Date().toLocaleDateString()}
-
-                                    </li>
+                                   
+                                   
                                 </ul>
                             </div>
                         </div>
@@ -47,7 +39,7 @@ export default function Page() {
                             <h4>Useful Links</h4>
                             <ul>
                                 <li><Link href="/" className="active">Home</Link></li>
-                                <li><Link href="/products">Auctions</Link></li>
+                                {/* <li><Link href="/products">Auctions</Link></li> */}
                                 <li><Link href="/contact">Contact Us</Link></li>
                             </ul>
                         </div>
