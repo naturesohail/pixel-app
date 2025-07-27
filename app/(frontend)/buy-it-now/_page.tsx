@@ -395,14 +395,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
                       <strong>
                         ${activeAuctionZone.pixelPrice?.toFixed(2) || "0.00"}
                       </strong>
-                      <span>Number of pixels:</span>
-                      <strong>
-                        {
-                          pixelGrid?.config.auctionZones[
-                            pixelGrid?.config.auctionZones.length - 1
-                          ].totalPixels
-                        }
-                      </strong>
+                      
                     </div>
                   </div>
 
