@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+
 export default function Page() {
     return (
         <div style={{
@@ -24,6 +25,7 @@ export default function Page() {
                                     <span style={{ color: "white" }}>MDC</span>
                                 </div>
                                 <ul>
+
                                     <li>
                                         <a href="#">16501 Collins Ave, Sunny Isles Beach, FL 33160, United States</a>
                                     </li>
@@ -32,6 +34,10 @@ export default function Page() {
                                     </li>
                                     <li>
                                         <a href="#">010-020-0340</a>
+                                    </li>
+                                    <li>
+                                        Last updated: {new Date().toLocaleDateString()}
+
                                     </li>
                                 </ul>
                             </div>
