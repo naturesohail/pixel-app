@@ -310,20 +310,9 @@ useEffect(() => {
               </div>
               <div className="col-md-6">
                 <div className="mb-4">
-                  <label className="form-label">Number of pixels:</label>
                   <div className="d-flex align-items-center">
                    
-                    <div
-                      className="mx-2"
-                      style={{ width: "80px", textAlign: "center" }}
-                    >
-                      {
-                        pixelGrid?.config.auctionZones[
-                          pixelGrid?.config.auctionZones.length - 1
-                        ].totalPixels
-                      }
-                    </div>
-                  
+                    
                   </div>
                  
                 </div>
