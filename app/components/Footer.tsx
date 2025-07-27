@@ -22,7 +22,7 @@ export default function Page() {
                         <div className="col-lg-6">
                             <div className="first-item">
                                 <div className="logo">
-                                    <span style={{ color: "white" }}>AI OF THE WORLD</span>
+                                    <span style={{ color: "white" }}>AIOFTHEWORLD</span>
                                 </div>
                                 <ul>
 
