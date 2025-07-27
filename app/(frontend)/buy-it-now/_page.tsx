@@ -307,18 +307,8 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
               </div>
               <div className="col-md-6">
                 <div className="mb-4">
-                  <label className="form-label">Number of pixels:</label>
                   <div className="d-flex align-items-center">
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={decrementCount}
-                      disabled={
-                        pixelCount <=
-                        (pixelGrid?.config.minimumOrderQuantity || 1)
-                      }
-                    >
-                      -
-                    </button>
+                    
                     <div
                       className="mx-2"
                       style={{ width: "80px", textAlign: "center" }}
