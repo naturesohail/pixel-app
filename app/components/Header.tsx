@@ -149,6 +149,12 @@ export default function Header() {
                         ref={dropdownRef}
                         className="absolute right-0 mt-2 w-40 bg-gray-100 border border-gray-300 rounded-md shadow-lg z-10"
                       >
+                         <Link
+                          href="/reset-password"
+                          className="block px-4 py-2 hover:bg-gray-200 text-gray-800"
+                          >
+                            Reset Password
+                          </Link>
                         <Link
                           href="/transactions"
                           className="block px-4 py-2 hover:bg-gray-200 text-gray-800"
