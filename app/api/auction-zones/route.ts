@@ -56,9 +56,9 @@ export async function POST(request: Request) {
       height,
       productIds = [],
       isEmpty,
-      auctionDuration = 3,
+      auctionDuration = 7,
       buyNowPrice,
-      pixelPrice = 0.01,
+      pixelPrice = 1,
     } = await request.json();
 
     let config = await PixelConfig.findOne().sort({ createdAt: -1 });

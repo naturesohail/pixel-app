@@ -19,7 +19,6 @@ export async function POST(request: Request) {
       zoneId,
     } = await request.json();
 
-    // Validate input
     if (!Types.ObjectId.isValid(userId) || !pixelCount || !product) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -27,7 +26,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get current config with proper null checking
     const config = await PixelConfig.findOne().sort({ createdAt: -1 });
     if (!config) {
       return NextResponse.json(
@@ -36,40 +34,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // // Determine bidIndex based on existing products count
-    // const productsCount = await Product.countDocuments();
-    // const bidIndex = productsCount;
+  
 
-    // // Check if this bidIndex already exists in bids
-    // const existingBidForIndex = await Bid.findOne({ bidIndex });
-
-    // // Only deduct pixels if this is the first bid for this index
-    // let shouldDeductPixels = !existingBidForIndex;
-    // let updatedConfig = config;
-
-    // if (shouldDeductPixels) {
-    //   // Check available pixels
-    //   if (config.availablePixels < pixelCount) {
-    //     return NextResponse.json(
-    //       { error: 'Not enough pixels available' },
-    //       { status: 400 }
-    //     );
-    //   }
-
-    //   // Update pixel config with proper null checking
-    //   const updateResult = await PixelConfig.findByIdAndUpdate(
-    //     config._id,
-    //     { $inc: { availablePixels: -pixelCount } },
-    //     { new: true }
-    //   );
-
-    //   if (!updateResult) {
-    //     throw new Error('Failed to update pixel configuration');
-    //   }
-    //   updatedConfig = updateResult;
-    // }
-
-    // Create bid with all required fields
     const newBid = await Bid.create({
       title: product.title,
       description: product.description,
@@ -84,7 +50,7 @@ export async function POST(request: Request) {
       zoneId: new Types.ObjectId(zoneId),
       isOneTimePurchase: isOneTimePurchase || false,
     });
-    // update auction zone as booked
+    
     await PixelConfig.updateOne(
       {},
       {
@@ -103,7 +69,7 @@ export async function POST(request: Request) {
       success: true,
       config,
       bid: newBid,
-      message: "bid created",
+      message: "bid created Successfully",
     });
   } catch (error) {
     console.error("Bid placement error:", error);

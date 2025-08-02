@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { Product } from "../types/productTypes";
 import { AuctionZone } from "../types/AuctionZoneTypes";
+import { formatTimeRemaining } from "../helpers/formatTimeRemaining";
 
 export default function AuctionCard({ config, products }: any) {
   const router = useRouter();
@@ -79,7 +80,7 @@ export default function AuctionCard({ config, products }: any) {
               Date.now() + (zone.auctionDuration || 7) * 24 * 60 * 60 * 1000
             ).toISOString(),
           totalPixels: zone.width * zone.height,
-          pixelPrice: zone.pixelPrice || 0.01,
+          pixelPrice: zone.pixelPrice || 1,
         }))
         .filter((zone: any) => {
           if (zone.auctionEndDate && new Date(zone.auctionEndDate) < now) {
@@ -271,21 +272,23 @@ export default function AuctionCard({ config, products }: any) {
           ctx.font = "bold 12px Arial";
           ctx.textAlign = "center";
 
-          if (zone.auctionEndDate && zone.isEmpty) {
+          if (zone.expiryDate && zone.isEmpty) {
             ctx.fillText(
               `${zone.width}x${zone.height} (${zone.totalPixels}px)`,
               zoneX + zoneWidth / 2,
               zoneY + zoneHeight / 2
             );
-            const endDate = new Date(zone.auctionEndDate);
+            const endDate = new Date(zone.expiryDate);
             const daysLeft = Math.ceil(
               (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
             );
-            ctx.fillText(
-              `Ends in ${daysLeft}d`,
-              zoneX + zoneWidth / 2,
-              zoneY + zoneHeight / 2 + 15
-            );
+            const timeLeft = formatTimeRemaining(zone.expiryDate);
+          ctx.fillText(
+             timeLeft,
+            zoneX + zoneWidth / 2,
+            zoneY + zoneHeight / 2 + 15
+          );
+
           }
         }
       }
@@ -643,6 +646,8 @@ export default function AuctionCard({ config, products }: any) {
       return;
     }
   };
+   
+
 
   useEffect(() => {
     drawCanvas();
@@ -848,13 +853,16 @@ export default function AuctionCard({ config, products }: any) {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Auction Duration (Days)
                       </label>
-                      <select
+                      <input
+                        type="number"
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        value={auctionDuration}
+                        value={7}
                         onChange={(e) => setAuctionDuration(Number(e.target.value))}
-                      >
-                        <option value="7">7 Days</option>
-                      </select>
+                        disabled
+                        />
+                      
+                      
+                
                     </div>
                     <div></div>
                   </div>
@@ -866,8 +874,9 @@ export default function AuctionCard({ config, products }: any) {
                     <input
                       type="number"
                       className="form-control"
-                      min="0.01"
-                      step="0.01"
+                      min="1"
+                      step="1"
+                      required
                       value={pixelPrice <= 0 ? "" : pixelPrice}
                       onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
                       placeholder="Enter price per pixel"
@@ -884,7 +893,7 @@ export default function AuctionCard({ config, products }: any) {
                     <input
                       type="number"
                       className="form-control"
-                      step="0.01"
+                      step="1"
                       min={minBuyNowPrice}
                       placeholder={`Min $${minBuyNowPrice.toFixed(2)} per pixel`}
                       value={buyNowPrice}

@@ -42,6 +42,10 @@ const bidSchema = new Schema(
       type: Number,
       // required: true,
     },
+    bidPerPixel: {
+       type: Number, 
+       required: false 
+   },
     bidIndex: {
       // New field to track which product index this bid is for
       type: Number,

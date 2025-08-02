@@ -198,9 +198,8 @@ useEffect(() => {
       throw new Error(data.error);
     }
 
-    // Redirect to Stripe Checkout
     if (data.id) {
-      window.location.href = data.url; // This should be the checkout URL
+      window.location.href = data.url; 
     } else {
       throw new Error("Missing checkout session URL");
     }
