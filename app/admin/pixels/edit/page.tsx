@@ -133,7 +133,7 @@ function EditPixelContent() {
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-gray-700">Total Pixels</label>
                 <input 
                   type="number" 
@@ -146,9 +146,9 @@ function EditPixelContent() {
                 <p className="mt-1 text-sm text-gray-500">
                   Currently available: {config.availablePixels.toLocaleString()} pixels
                 </p>
-              </div>
+              </div> */}
 
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-gray-700">Minimum Order Quantity</label>
                 <input 
                   type="number" 
@@ -159,9 +159,9 @@ function EditPixelContent() {
                   min="1"
                 />
                 <p className="mt-1 text-xs text-gray-500">Minimum number of pixels a user must purchase</p>
-              </div>
+              </div> */}
 
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-gray-700">Auction Win Days</label>
                 <input 
                   type="number" 
@@ -172,7 +172,7 @@ function EditPixelContent() {
                   min="1"
                 />
                 <p className="mt-1 text-xs text-gray-500">Days after which highest bid automatically wins</p>
-              </div>
+              </div> */}
             </div>
 
             <div className="flex justify-end gap-4">

@@ -164,10 +164,10 @@ export default function Header() {
                           className="w-full text-left px-4 py-2 hover:bg-gray-200 text-gray-800"
                         >
                         <Link
-                          href="/reset-password"
+                          href="/forgot-password"
                           className="block py-2 hover:bg-gray-200 text-gray-800"
                           >
-                            Reset&nbsp;Password
+                            Forget&nbsp;Password
                           </Link>                        
                         </button>
                         <button

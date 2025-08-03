@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 import connectDB from "@/app/lib/db";
 import User from "@/app/lib/models/userModel";
 
-export async function POST(req:Request) {
+export async function POST(req: Request) {
   await connectDB();
 
   try {
@@ -34,21 +34,22 @@ export async function POST(req:Request) {
 
     const resetLink = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${resetToken}`;
 
+    // Fixed transporter configuration for SMTP
     const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASSWORD,
-  },
-  logger: true,  
-  debug: true,   
-});
-
+      host: process.env.MAIL_HOST,       // mail.datanapp.com
+      port: parseInt(process.env.MAIL_PORT || "465"), // Use 465 for SSL
+      secure: true, // Use SSL
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false // For self-signed certificates (if needed)
+      }
+    });
 
     await transporter.sendMail({
-      from: `"Pixel App Support" <${process.env.EMAIL_USER}>`,
+      from: `"Pixel App Support" <${process.env.MAIL_FROM}>`, // Use MAIL_FROM env
       to: email,
       subject: "Password Reset Request",
       html: `
@@ -89,7 +90,10 @@ export async function POST(req:Request) {
   } catch (error) {
     console.error("Forgot password error:", error);
     return NextResponse.json(
-      { message: "Internal server error" , error},
+      { 
+        message: "Failed to send reset email. Please try again later.",
+        error: error instanceof Error ? error.message : "Unknown error"
+      },
       { status: 500 }
     );
   }

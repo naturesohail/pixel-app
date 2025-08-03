@@ -76,6 +76,7 @@ export default function BidForm({
       const data = await response.json();
 
       if (response.ok) {
+
         Swal.fire({
           title: "Bid Placed!",
           text: `Your bid of $${Number(bidPerPixel).toFixed(2)} per pixel was successful`,
@@ -89,9 +90,7 @@ export default function BidForm({
           createdAt: new Date().toISOString(),
           bidIndex: data.bidIndex,
           winStatus: false,
-          resultTime:
-            Date.now() +
-            (config?.auctionWinDays || 2) * 24 * 60 * 60 * 1000,
+          resultTime: Date.now() + (config?.auctionWinDays || 2) * 24 * 60 * 60 * 1000,
         };
 
         onNewBid(newBid);
@@ -105,6 +104,7 @@ export default function BidForm({
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">

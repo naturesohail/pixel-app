@@ -1,9 +1,10 @@
-
 import { NextResponse } from "next/server";
 import Bid from "@/app/lib/models/bidModel";
+import User from "@/app/lib/models/userModel";
 import dbConnect from "@/app/lib/db";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
+import { sendEmail, bidNotificationTemplate } from "@/app/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +31,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the highest bid index
     const highestBid = await Bid.findOne({ zoneId }).sort({ bidIndex: -1 });
     const nextBidIndex = highestBid ? highestBid.bidIndex + 1 : 1;
 
@@ -51,6 +51,11 @@ export async function POST(request: Request) {
 
     await newBid.save();
 
+    // Notify other bidders in background
+    notifyOtherBidders(zoneId, decoded.id, bidAmount).catch(error => {
+      console.error("Bid notification error:", error);
+    });
+
     return NextResponse.json({
       success: true,
       bid: newBid,
@@ -68,4 +73,45 @@ export async function POST(request: Request) {
   }
 }
 
+// Helper function to notify other bidders
+async function notifyOtherBidders(zoneId: string, currentBidderId: string, newBidAmount: number) {
+  try {
+    await dbConnect();
+    
+    const bidUserIds = await Bid.distinct("userId", {
+      zoneId,
+      userId: { $ne: currentBidderId },
+      status: "pending"
+    });
 
+    if (bidUserIds.length === 0) return;
+
+    const users = await User.find(
+      { _id: { $in: bidUserIds } },
+      { email: 1 }
+    );
+
+    if (users.length === 0) return;
+
+    const uniqueEmails = [...new Set(users.map(user => user.email))];
+    
+    const subject = `New Bid on Zone ${zoneId} - You've Been Outbid!`;
+    const htmlContent = bidNotificationTemplate(zoneId, newBidAmount);
+    
+    const emailPromises = uniqueEmails.map(email => 
+      sendEmail({
+        to: email,
+        subject,
+        text: `A new bid of $${newBidAmount.toFixed(2)} has been placed on zone ${zoneId}.`,
+        html: htmlContent
+      })
+    );
+
+    await Promise.allSettled(emailPromises);
+    
+    console.log(`Sent notifications to ${uniqueEmails.length} bidders`);
+  } catch (error) {
+    console.error("Error in notifyOtherBidders:", error);
+    throw error;
+  }
+}

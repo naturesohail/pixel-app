@@ -14,6 +14,7 @@ export async function GET(req) {
     const skip = (page - 1) * limit;
 
     
+    
     const searchQuery = {
       isAdmin: false,
       $or: [

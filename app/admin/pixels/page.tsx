@@ -94,7 +94,7 @@ export default function Pixels() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['#', 'Price/Pixel', 'One-Time Price', 'Total Pixels', 'Available', 'Sold %', 'Created', 'Actions'].map(header => (
+                {['Price/Pixel', 'One-Time Price', 'Total Pixels',   'Actions'].map(header => (
                   <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     {header}
                   </th>
@@ -117,19 +117,16 @@ export default function Pixels() {
               ) : (
                 configs.map((config, index) => (
                   <tr key={config._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">{index + 1}</td>
                     <td className="px-6 py-4">${config.pricePerPixel}</td>
                     <td className="px-6 py-4">${config.oneTimePrice?.toFixed(2)}</td>
                     <td className="px-6 py-4">{config.totalPixels?.toLocaleString()}</td>
-                    <td className="px-6 py-4">{config.availablePixels?.toLocaleString()}</td>
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">{config.availablePixels?.toLocaleString()}</td> */}
+                    {/* <td className="px-6 py-4">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                         {calculateSoldPercentage(config)}%
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {new Date(config.createdAt).toLocaleDateString()}
-                    </td>
+                    </td> */}
+                    
                     <td className="px-6 py-4 text-right">
                       <DropdownMenu buttonContent={<span>•••</span>}>
                         <button
@@ -138,7 +135,7 @@ export default function Pixels() {
                         >
                           ✏️ Edit
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => {
                             setConfigToDelete(config._id);
                             setIsDeleteOpen(true);
@@ -146,7 +143,7 @@ export default function Pixels() {
                           className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
                         >
                           🗑️ Delete
-                        </button>
+                        </button> */}
                       </DropdownMenu>
                     </td>
                   </tr>
