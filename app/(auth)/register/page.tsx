@@ -4,16 +4,44 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Swal from "sweetalert2";
 import Link from "next/link";
-import { AtSymbolIcon, LockClosedIcon, UserIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import {
+  AtSymbolIcon,
+  LockClosedIcon,
+  UserIcon,
+  PhoneIcon,
+  BriefcaseIcon,
+  GlobeAltIcon,
+  DocumentTextIcon,
+  BuildingOfficeIcon
+} from "@heroicons/react/24/outline";
 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [companyName, setCompanyName] = useState(""); // New company name field
   const [phone, setPhone] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [website, setWebsite] = useState("");
+  const [businessDescription, setBusinessDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const industries = [
+    "Government",
+    "Education",
+    "Information Technology",
+    "Pharmaceutical",
+    "Manufacturing",
+    "Retailers",
+    "Health care",
+    "Food and beverages",
+    "Tourism",
+    "Supply Chain Management",
+    "Logistics",
+    "Transportation"
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +62,16 @@ export default function Register() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, phone }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          companyName, // Include company name in payload
+          phone,
+          industry,
+          website,
+          businessDescription
+        }),
       });
 
       const data = await response.json();
@@ -87,6 +124,21 @@ export default function Register() {
               />
             </div>
 
+            {/* New Company Name Field */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="companyName"
+                type="text"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Company name (optional)"
+              />
+            </div>
+
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <AtSymbolIcon className="h-5 w-5 text-gray-400" />
@@ -114,6 +166,57 @@ export default function Register() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Phone number"
+              />
+            </div>
+
+            {/* Industry Dropdown */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <BriefcaseIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <select
+                id="industry"
+                required
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+              >
+                <option value="" disabled>Select your industry</option>
+                {industries.map((ind) => (
+                  <option key={ind} value={ind}>{ind}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Website Input */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <GlobeAltIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="website"
+                type="url"
+                required
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="Business URL"
+              />
+            </div>
+
+            {/* Business Description */}
+            <div className="relative">
+              <div className="absolute top-3 left-3 flex items-start pointer-events-none">
+                <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <textarea
+                id="businessDescription"
+                required
+                rows={3}
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                value={businessDescription}
+                onChange={(e) => setBusinessDescription(e.target.value)}
+                placeholder="Business Description"
               />
             </div>
 
@@ -146,7 +249,6 @@ export default function Register() {
                 placeholder="Confirm Password"
               />
             </div>
-
           </div>
 
           <div className="flex items-center">

@@ -122,11 +122,13 @@ export default function Header() {
                   </div>
                 </div>
 
-                {/* <li>
-                  <Link ref={auctionsLinkRef} href="/auctions" className="hover:text-blue-600 text-gray-800 font-medium">
-                    Auctions
+                
+                 <li>
+                  <Link href="/companies" className="hover:text-blue-600 text-gray-800 font-medium">
+                     Companies
                   </Link>
-                </li> */}
+                </li>
+
                 <li>
                   <Link href="/contact" className="hover:text-blue-600 text-gray-800 font-medium">
                     Contact Us

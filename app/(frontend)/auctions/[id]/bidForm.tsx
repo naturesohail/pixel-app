@@ -16,7 +16,7 @@ export default function BidForm({
 }) {
   const hasBids = highestBid > 0;
 
-  const minimumAllowedPerPixel = config?.minimumBidPerPixel || 5;
+  const minimumAllowedPerPixel = config?.pricePerPixel;
 
   const currentBidPerPixel = hasBids
     ? highestBid / activeAuctionZone.totalPixels

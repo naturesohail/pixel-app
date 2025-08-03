@@ -8,19 +8,33 @@ export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const { name, email, phone, password } = await req.json();
+    const { 
+      name, 
+      email, 
+      phone, 
+      password, 
+      industry, 
+      website,
+      businessDescription,
+      companyName // New optional field
+    } = await req.json();
 
-    if (!name || !email || !password || !phone) { // Added phone to required fields
+    // Validate required fields (companyName is optional)
+    if (!name || !email || !password || !phone || !industry || !website || !businessDescription) { 
       return NextResponse.json(
-        { error: "Name, Email, Phone, and Password are required" },
+        { error: "All fields except company name are required" },
         { status: 400 }
       );
     }
 
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       return NextResponse.json({ error: "Email Already Exists" }, { status: 401 });
+    }
+
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+      return NextResponse.json({ error: "Phone number Already Exists" }, { status: 401 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -29,8 +43,11 @@ export async function POST(req: Request) {
       name,
       email,
       phone,
+      industry,
+      website,
+      businessDescription,
       password: hashedPassword,
-
+      companyName: companyName || "", // Handle optional field
     });
 
     return NextResponse.json({ createUser }, { status: 200 });

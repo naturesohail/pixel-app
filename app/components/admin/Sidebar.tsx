@@ -27,12 +27,12 @@ export default function Sidebar() {
       icon: CubeIcon,  
       path: '/admin/pixels',
       subItems: [
-        { name: 'Categories', icon: TagIcon, path: '/admin/categories' },
+        // { name: 'Categories', icon: TagIcon, path: '/admin/categories' },
         { name: 'Pixels', icon: CubeIcon, path: '/admin/pixels' }, 
       ] 
     },
     { name: 'Bidders', icon: UserGroupIcon, path: '/admin/bidders' },
-    { name: 'Bids', icon: ScaleIcon, path: '/admin/bids' },
+    // { name: 'Bids', icon: ScaleIcon, path: '/admin/bids' },
     { name: 'Queries', icon: QuestionMarkCircleIcon, path: '/admin/queries' },
 
   ];

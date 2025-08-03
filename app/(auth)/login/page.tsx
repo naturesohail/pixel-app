@@ -36,7 +36,7 @@ export default function Login() {
       }
 
       if (!data.user?.isActive) {
-        throw new Error("Your account has been disabled. Please contact support.");
+        throw new Error("Your account has been disabled or pending for approval. Please contact support.");
       }
 
       login(data.user);
@@ -63,8 +63,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-
 
 
   return (

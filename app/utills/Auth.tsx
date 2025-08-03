@@ -17,7 +17,6 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Ensure we are on client side before accessing localStorage
     if (typeof window !== "undefined") {
       const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
 

@@ -1,11 +1,15 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import BidForm from "./bidForm";
 import Swal from "sweetalert2";
 import { useRouter, useParams } from "next/navigation";
 import Countdown from "react-countdown";
 import Link from "next/link";
+import Footer from "@/app/components/Footer";
+import Header from "@/app/components/Header";
+import FrontendLayout from "@/app/layouts/FrontendLayout";
+
+
 export default function PixelMarketplace() {
   const params = useParams();
   const [userId, setUserId] = useState<string | null>(null);
@@ -16,9 +20,50 @@ export default function PixelMarketplace() {
   const [highestBid, setHighestBid] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const router = useRouter();
-  
+
   const zoneId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [auctionEnded, setAuctionEnded] = useState(false);
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
+      if (!zoneId) {
+        Swal.fire({
+          title: "Invalid Auction Zone",
+          text: "No auction zone specified",
+          icon: "error",
+          confirmButtonColor: "#4f46e5",
+          confirmButtonText: "Go Home",
+        }).then(() => router.push("/"));
+        return;
+      }
+
+      try {
+        const storedUser = localStorage.getItem("userData");
+        if (!storedUser) {
+          throw new Error("No user session");
+        }
+
+        const parsed = JSON.parse(storedUser);
+        if (!parsed?._id) {
+          throw new Error("Invalid user session");
+        }
+
+        setUserId(parsed._id);
+        await fetchPixelData();
+      } catch (err) {
+        console.error("Authentication error:", err);
+        Swal.fire({
+          title: "Login Required",
+          text: "You need to log in to view this auction",
+          icon: "warning",
+          confirmButtonColor: "#4f46e5",
+          confirmButtonText: "Go to Login",
+        }).then(() => router.push("/login"));
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [zoneId, router]);
 
   useEffect(() => {
     if (!zoneId) {
@@ -59,7 +104,7 @@ export default function PixelMarketplace() {
     try {
       const bidRes = await fetch(`/api/pixels/bid/zone?zoneId=${zoneId}`);
       const bidData = await bidRes.json();
-      
+
       if (bidData.success) {
         setBids(bidData.bids);
         setHighestBid(bidData.highestBid || 0);
@@ -73,20 +118,20 @@ export default function PixelMarketplace() {
     try {
       setLoading(true);
       const pixelRes = await fetch("/api/pixels");
-      
+
       if (!pixelRes.ok) {
         throw new Error("Failed to fetch pixel data");
       }
-      
+
       const pixelData = await pixelRes.json();
 
       if (pixelData.success && pixelData.config) {
         setConfig(pixelData.config);
-        
+
         // Find the active auction zone
         const auctionZones = pixelData.config.auctionZones || [];
         const activezone = auctionZones.find((zone: any) => zone._id === zoneId);
-        
+
         if (!activezone) {
           Swal.fire({
             title: "Auction Not Found",
@@ -97,15 +142,15 @@ export default function PixelMarketplace() {
           }).then(() => router.push("/auctions"));
           return;
         }
-        
+
         setActiveAuctionZone(activezone);
-        
+
         // Set auction end time
         if (activezone.expiryDate) {
           const endTime = new Date(activezone.expiryDate).getTime();
           setTimeLeft(endTime - Date.now());
         }
-        
+
         // Fetch bids
         await fetchBids();
       }
@@ -124,17 +169,13 @@ export default function PixelMarketplace() {
   }
 
   const handleNewBid = (newBid: any) => {
-    // Add new bid to the top of the list
     setBids([newBid, ...bids]);
-    
-    // Update highest bid
     setHighestBid(newBid.bidAmount);
   };
 
-  // Handle payment for winning bid
+
   const handlePayment = async (bidId: string) => {
     try {
-      // Call API to create Stripe payment session
       const response = await fetch("/api/payment/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,9 +188,8 @@ export default function PixelMarketplace() {
       });
 
       const data = await response.json();
-      
+
       if (data.url) {
-        // Redirect to Stripe payment page
         window.location.href = data.url;
       } else {
         throw new Error("Failed to create payment session");
@@ -165,7 +205,6 @@ export default function PixelMarketplace() {
     }
   };
 
-  // Countdown renderer
   const renderCountdown = ({ days, hours, minutes, seconds, completed }: any) => {
     if (completed) {
       return <span className="text-red-600 font-bold">Auction Ended</span>;
@@ -177,11 +216,12 @@ export default function PixelMarketplace() {
     );
   };
 
-  // Check if user has already bid
   const userHasBid = userId && bids.some(bid => bid.userId.toString() === userId);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+       <FrontendLayout>
+            <Header />
+    <div className="container mx-auto px-4 " style={{marginTop: "88px"}}>
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
@@ -198,26 +238,33 @@ export default function PixelMarketplace() {
                     {activeAuctionZone?.name || "Auction Zone"}
                   </h1>
                   <p className="text-gray-600 mb-2">
-                    {activeAuctionZone?.isEmpty 
-                      ? "Empty pixel zone" 
-                      : `Products: ${activeAuctionZone?.products?.title || "No products"}`}
+                    <b>
+                      Total Pixels: {activeAuctionZone?.totalPixels || 0}
+
+                    </b>
+                  </p>
+                   <p className="text-gray-600 mb-2">
+                    <b>
+                                   Size {activeAuctionZone.width } x {activeAuctionZone .height} Pixel
+
+                    </b>
                   </p>
                 </div>
-                
+
                 {activeAuctionZone?.expiryDate && (
                   <div className="bg-purple-100 px-4 py-2 rounded-lg">
-                    <span className="text-purple-800 mr-2">Ends in:</span>
-                    <Countdown 
-                      date={Date.now() + timeLeft} 
+                    <span className="text-red-800 mr-2">Ends in:</span>
+                    <Countdown
+                      date={Date.now() + timeLeft}
                       renderer={renderCountdown}
                       onComplete={() => setAuctionEnded(true)}
                     />
                   </div>
                 )}
               </div>
-              
-             
-              
+
+
+
               <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                 <h2 className="text-lg font-semibold text-yellow-800 mb-2">
                   Current Bidding Status
@@ -231,10 +278,10 @@ export default function PixelMarketplace() {
                     <p className="text-gray-600">Total Bids</p>
                     <p className="text-xl font-bold">{bids.length}</p>
                   </div>
-                  
+
                 </div>
               </div>
-              
+
               {/* Always show Buy it Now button */}
               {activeAuctionZone?.buyNowPrice && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
@@ -262,100 +309,101 @@ export default function PixelMarketplace() {
                 </div>
               )}
             </div>
-            
-            {!userHasBid && !auctionEnded && activeAuctionZone?._id && (
-              <BidForm 
-                config={config} 
-                activeAuctionZone={activeAuctionZone} 
+
+            {/* {!userHasBid && !auctionEnded && activeAuctionZone?._id && ( */}
+            { !auctionEnded && activeAuctionZone?._id && (
+
+              <BidForm
+                config={config}
+                activeAuctionZone={activeAuctionZone}
                 highestBid={highestBid}
                 onNewBid={handleNewBid}
               />
             )}
           </div>
-          
-          {/* Right Column - Bids List */}
-      <div className="lg:col-span-3">
-  <div className="bg-white rounded-lg shadow-md h-[calc(100vh-120px)] p-6 sticky top-4 flex flex-col">
-    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-      All Bids ({bids.length})
-    </h2>
 
-    <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-      {bids.length === 0 ? (
-        <div className="text-center py-8">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No bids yet</h3>
-          <p className="mt-1 text-sm text-gray-500">Be the first to place a bid!</p>
-        </div>
-      ) : (
-        bids.map((bid) => (
-          <div 
-            key={bid._id} 
-            className={`p-4 rounded-lg border ${
-              bid.bidAmount === highestBid 
-                ? "bg-green-50 border-green-200" 
-                : "bg-gray-50 border-gray-200"
-            } ${
-              bid.userId === userId ? "ring-2 ring-blue-300" : ""
-            }`}
-          >
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium">
-                  Bid #{bid.bidIndex}
-                  {bid.userId.toString() === userId && (
-                    <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                      Your Bid
-                    </span>
-                  )}
-                  {bid.winStatus && (
-                    <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                      Winner
-                    </span>
-                  )}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {new Date(bid.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold">${bid.bidAmount}</p>
-                <p className="text-sm text-gray-500">
-                  {bid.userId.toString() === userId ? "You" : "Bidder " + bid.userId.toString().slice(-4)}
-                </p>
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-lg shadow-md h-[calc(100vh-120px)] p-6 sticky top-4 flex flex-col">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                All Bids ({bids.length})
+              </h2>
+
+              <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                {bids.length === 0 ? (
+                  <div className="text-center py-8">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No bids yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Be the first to place a bid!</p>
+                  </div>
+                ) : (
+                  bids.map((bid) => (
+                    <div
+                      key={bid._id}
+                      className={`p-4 rounded-lg border ${bid.bidAmount === highestBid
+                          ? "bg-green-50 border-green-200"
+                          : "bg-gray-50 border-gray-200"
+                        } ${bid.userId === userId ? "ring-2 ring-blue-300" : ""
+                        }`}
+                    >
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="font-medium">
+                            Bid #{bid.bidIndex}
+                            {bid.userId.toString() === userId && (
+                              <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                Your Bid
+                              </span>
+                            )}
+                            {bid.winStatus && (
+                              <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                Winner
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(bid.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold">${bid.bidAmount}</p>
+                          <p className="text-sm text-gray-500">
+                            {bid.userId.toString() === userId ? "You" : "Bidder " + bid.userId.toString().slice(-4)}
+                          </p>
+                        </div>
+                      </div>
+                      {bid.resultTime && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Result at: {new Date(bid.resultTime).toLocaleString()}
+                        </p>
+                      )}
+                      {auctionEnded &&
+                        bid.bidAmount === highestBid &&
+                        bid.userId.toString() === userId && (
+                          <div className="mt-3">
+                            <button
+                              onClick={() => handlePayment(bid._id)}
+                              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition"
+                            >
+                              Complete Payment
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-            {bid.resultTime && (
-              <p className="text-xs text-gray-500 mt-2">
-                Result at: {new Date(bid.resultTime).toLocaleString()}
-              </p>
-            )}
-            {auctionEnded && 
-             bid.bidAmount === highestBid && 
-             bid.userId.toString() === userId && (
-              <div className="mt-3">
-                <button
-                  onClick={() => handlePayment(bid._id)}
-                  className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition"
-                >
-                  Complete Payment
-                </button>
-              </div>
-            )}
           </div>
-        ))
-      )}
-    </div>
-  </div>
-</div>
 
         </div>
       )}
     </div>
+    <Footer />
+       </FrontendLayout>
   );
 }

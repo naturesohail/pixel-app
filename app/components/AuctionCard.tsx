@@ -24,7 +24,7 @@ export default function AuctionCard({ config, products }: any) {
   const [isSaving, setIsSaving] = useState(false);
   const [auctionDuration, setAuctionDuration] = useState<number>(7);
   const [showAuctionModal, setShowAuctionModal] = useState(false);
-  const [pixelPrice, setPixelPrice] = useState<number>(0);
+  const [pixelPrice, setPixelPrice] = useState<number>(config?.pricePerPixel);
   const [buyNowPrice, setBuyNowPrice] = useState<number>(config?.oneTimePrice);
   const [viewX, setViewX] = useState(0);
   const [viewY, setViewY] = useState(0);
@@ -66,6 +66,7 @@ export default function AuctionCard({ config, products }: any) {
   useEffect(() => {
     if (config?.auctionZones) {
       setBuyNowPrice(config?.oneTimePrice);
+      setPixelPrice(config?.pixelPrice);
       const now = new Date();
       const zones = config.auctionZones
         .map((zone: any) => ({
@@ -123,7 +124,9 @@ export default function AuctionCard({ config, products }: any) {
     return () => clearInterval(interval);
   }, [auctionZones]);
 
-  const minBuyNowPrice = config?.oneTimePrice ?? 20;
+  const minBuyNowPrice = config?.oneTimePrice;
+  const minPixelPrice = config?.pixelPrice;
+
 
   const findProductsInArea = useCallback(
     (x: number, y: number, width: number, height: number): Product[] => {
@@ -848,45 +851,8 @@ export default function AuctionCard({ config, products }: any) {
                 )}
 
                 <div className="row">
-                  <div className="col-md-6 gap-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Auction Duration (Days)
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        value={7}
-                        onChange={(e) => setAuctionDuration(Number(e.target.value))}
-                        disabled
-                        />
-                      
-                      
                 
-                    </div>
-                    <div></div>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-bold">
-                      Bid Price Per Pixel ($)
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      min="1"
-                      step="1"
-                      required
-                      value={pixelPrice <= 0 ? "" : pixelPrice}
-                      onChange={(e) => setPixelPrice(parseFloat(e.target.value))}
-                      placeholder="Enter price per pixel"
-                    />
-                    <small className="text-muted">
-                      Price per pixel for bids
-                    </small>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
+ <div className="col-md-6 mb-3">
                     <label className="form-label fw-bold">
                       Instant Buy Price Per Pixel ($)
                     </label>
@@ -909,15 +875,62 @@ export default function AuctionCard({ config, products }: any) {
                     <small className="text-muted">
                       Minimum price per pixel: ${minBuyNowPrice.toFixed(2)}
                     </small>
+                  </div>  
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-bold">
+                      Bid Price Per Pixel ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min={minPixelPrice}
+                      step="1"
+                      required
+                      value={pixelPrice}
+                      placeholder={`Min $${minPixelPrice} per pixel`}
+                      onChange={(e) => {
+                        const newValue = parseFloat(e.target.value);
+                        setPixelPrice(
+                          isNaN(newValue)
+                            ? minPixelPrice
+                            : Math.max(minPixelPrice, newValue)
+                        );
+                      }}
+                      
+                    />
+                    <small className="text-muted">
+                      Price per pixel for bids
+                    </small>
                   </div>
+
+                 
+
 
                   <div className="col-md-6 mb-3 d-flex align-items-end">
                     <div className="w-100">
-                      <p className="mb-1 fw-bold">Total Pixels:</p>
-                      <div className="alert alert-secondary py-2 mb-0">
+                      <p className=" fw-bold">Total Pixels:</p>
+                      <div className="alert alert-secondary py-2 mb-0 p-2" >
                         {currentSelection.width * currentSelection.height} pixels
                       </div>
                     </div>
+                  </div>
+
+
+                    <div className="col-md-6 mb-1 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Auction Duration (Days)
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        value={7}
+                        onChange={(e) => setAuctionDuration(Number(e.target.value))}
+                        disabled
+                        />
+                      
+                    </div>
+                    <div></div>
                   </div>
                 </div>
 

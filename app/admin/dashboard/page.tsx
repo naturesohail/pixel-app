@@ -19,11 +19,6 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
 
-        // Replace with your actual API call
-        // const res = await fetch('/api/dashboard');
-        // const data = await res.json();
-        // Mock data
-       
         const mockData = {
           totalProducts: 156,
           activeBids: 89,
@@ -57,7 +52,6 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Products */}
         <div className="bg-white p-4 rounded shadow">
           <div className="flex items-center">
             <ShoppingCartIcon className="h-6 w-6 text-blue-500 mr-2" />
@@ -68,7 +62,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Active Bids */}
         <div className="bg-white p-4 rounded shadow">
           <div className="flex items-center">
             <TagIcon className="h-6 w-6 text-green-500 mr-2" />
@@ -79,7 +72,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Total Users */}
         <div className="bg-white p-4 rounded shadow">
           <div className="flex items-center">
             <UsersIcon className="h-6 w-6 text-purple-500 mr-2" />

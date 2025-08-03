@@ -62,7 +62,9 @@ export async function GET(request: Request) {
       };
     });
 
-    // Return ALL bids with highest bid information
+
+
+
     return NextResponse.json({ 
       success: true, 
       bids: enrichedBids,

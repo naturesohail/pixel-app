@@ -25,6 +25,7 @@ interface PixelDataResponse {
     _id: string;
     pricePerPixel: number;
     oneTimePrice: number;
+    pixelPrice: number;
     totalPixels: number;
     availablePixels: number;
     createdAt: string;
@@ -43,6 +44,7 @@ export default function HomePage() {
   const [pixelData, setPixelData] = useState<{
     config: {
       totalPixels: number;
+      pixelPrice: number;
       availablePixels: number;
       auctionZones?: {
         _id: string;
@@ -81,6 +83,8 @@ export default function HomePage() {
                 availablePixels: data.config.availablePixels,
                 auctionZones: data.config.auctionZones,
                 oneTimePrice: data.config.oneTimePrice,
+                pixelPrice: data.config.pricePerPixel,
+
               },
               products: data.products || [],
             });
