@@ -78,7 +78,7 @@ export default function ProductPage() {
   return (
     <FrontendLayout>
       <Header />
-      
+
       <div className="container my-5 mt-5">
         <div className="row">
           <div className="col-md-6">
@@ -92,7 +92,7 @@ export default function ProductPage() {
                           src={img}
                           alt={`${product.title} - Image ${i + 1}`}
                           fill
-                          style={{ objectFit: 'contain', marginTop:"50px" }}
+                          style={{ objectFit: 'contain', marginTop: "50px" }}
                           className="rounded"
                           priority={i === 0}
                         />
@@ -107,33 +107,33 @@ export default function ProductPage() {
               )}
             </div>
           </div>
-          
+
           <div className="col-md-6">
             <h1 className="mb-3">{product.title}</h1>
-            
+
             <div className="d-flex align-items-center mb-4">
               <h2 className="mb-0">${product.price.toFixed(2)}</h2>
-            
-              
+
+
             </div>
-            
+
             <div className="card mb-4">
               <div className="card-body">
                 <h5 className="card-title"></h5>
                 <dl className="row">
                   <dt className="col-sm-4">Category</dt>
                   <dd className="col-sm-8">{product.category || 'N/A'}</dd>
-                  
-                 
+
+
                   {product.pixelIndex && (
                     <>
                       <dt className="col-sm-4">Title</dt>
                       <dd className="col-sm-8">{product.title}</dd>
                     </>
                   )}
-                  
-                
-                  
+
+
+
                   {product.url && (
                     <>
                       <dt className="col-sm-4">Website</dt>
@@ -147,7 +147,7 @@ export default function ProductPage() {
                 </dl>
               </div>
             </div>
-            
+
             <div className="card mb-4">
               <div className="card-body">
                 <h5 className="card-title">Description</h5>
@@ -156,7 +156,7 @@ export default function ProductPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="card">
               <div className="card-body">
                 <h5 className="card-title">Additional Information</h5>
@@ -168,7 +168,7 @@ export default function ProductPage() {
           </div>
         </div>
       </div>
-      
+
       <Footer />
     </FrontendLayout>
   );
