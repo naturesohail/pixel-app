@@ -24,6 +24,7 @@ export default function Page() {
 
                                     <li>
                                         <a href="#">Developed by Data App LLC admin@aioftheworld.com </a>
+                                        <a href="#">Last Updated. {new Date().getUTCFullYear()}</a>
                                     </li>
                                    
                                    

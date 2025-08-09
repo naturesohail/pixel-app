@@ -41,7 +41,7 @@ export default function UserListPage() {
   const fetchUsers = async (page = 1, query = "") => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/bidders?page=${page}&limit=10&search=${query}`);
+      const res = await axios.get(`/api/companies?page=${page}&limit=10&search=${query}`);
       setUsers(res.data.users);
       setTotalPages(res.data.totalPages);
       setCurrentPage(res.data.currentPage);
@@ -110,6 +110,7 @@ export default function UserListPage() {
                       <TableCell><strong>Industries</strong></TableCell>
                     </TableRow>
                   </TableHead>
+
                   <TableBody>
                     {users.map((user, index) => (
                       <TableRow key={user._id}>

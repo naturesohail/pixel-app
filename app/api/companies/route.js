@@ -1,4 +1,5 @@
 import User from "@/app/lib/models/userModel";
+import Product from "@/app/lib/models/productModel"; 
 import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/db";
 
@@ -13,13 +14,17 @@ export async function GET(req) {
 
     const skip = (page - 1) * limit;
     
+    
+    const ownerIds = await Product.distinct('owner');
+    
     const searchQuery = {
       isAdmin: false,
+      _id: { $in: ownerIds }, 
       $or: [
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { phone: { $regex: search, $options: "i" } },
-        { companyName: { $regex: search, $options: "i" } }, 
+        { companyName: { $regex: search, $options: "i" } },
       ],
     };
 
