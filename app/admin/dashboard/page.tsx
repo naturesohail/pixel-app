@@ -103,15 +103,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded shadow">
-          <div className="flex items-center">
-            <TagIcon className="h-6 w-6 text-green-500 mr-2" />
-            <div>
-              <p className="text-sm text-gray-500">Active Bids</p>
-              <p className="text-xl font-bold">{data?.activeBids?.toLocaleString() || 0}</p>
-            </div>
-          </div>
-        </div>
+
 
         <div className="bg-white p-4 rounded shadow">
           <div className="flex items-center">

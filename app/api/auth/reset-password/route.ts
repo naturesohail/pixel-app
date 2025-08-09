@@ -9,7 +9,7 @@ export async function POST(req:Request) {
   try {
     const { token, password } = await req.json();
 
-    // Validate password
+    
     if (!password || password.length < 8) {
       return NextResponse.json(
         { message: "Password must be at least 8 characters long" },

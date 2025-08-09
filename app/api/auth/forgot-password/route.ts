@@ -34,22 +34,21 @@ export async function POST(req: Request) {
 
     const resetLink = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${resetToken}`;
 
-    // Fixed transporter configuration for SMTP
     const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,       // mail.datanapp.com
-      port: parseInt(process.env.MAIL_PORT || "465"), // Use 465 for SSL
-      secure: true, // Use SSL
+      host: process.env.MAIL_HOST,      
+      port: parseInt(process.env.MAIL_PORT || "465"), 
+      secure: true,
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASSWORD,
       },
       tls: {
-        rejectUnauthorized: false // For self-signed certificates (if needed)
+        rejectUnauthorized: false 
       }
     });
 
     await transporter.sendMail({
-      from: `"Pixel App Support" <${process.env.MAIL_FROM}>`, // Use MAIL_FROM env
+      from: `"Pixel App Support" <${process.env.MAIL_FROM}>`, 
       to: email,
       subject: "Password Reset Request",
       html: `

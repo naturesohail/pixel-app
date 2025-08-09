@@ -51,7 +51,6 @@ export async function POST(request: Request) {
 
     await newBid.save();
 
-    // Notify other bidders in background
     notifyOtherBidders(zoneId, decoded.id, bidAmount).catch(error => {
       console.error("Bid notification error:", error);
     });
@@ -73,7 +72,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Helper function to notify other bidders
 async function notifyOtherBidders(zoneId: string, currentBidderId: string, newBidAmount: number) {
   try {
     await dbConnect();
