@@ -1,7 +1,13 @@
 import Link from "next/link";
 
-
 export default function Page() {
+    const today = new Date();
+    const day = today.getDate().toString().padStart(2, "0");
+    const month = (today.getMonth() + 1).toString().padStart(2, "0");
+    const year = today.getFullYear();
+
+    const formattedDate = `${day}-${month}-${year}`;
+
     return (
         <div>
             <main style={{ flex: 1 }}>
@@ -21,13 +27,14 @@ export default function Page() {
                                     <span style={{ color: "white" }}>AIOFTHEWORLD</span>
                                 </div>
                                 <ul>
+                                    <li>
+                                        <a href="#">Developed by Data App LLC admin@aioftheworld.com</a>
+                                    </li>
 
                                     <li>
-                                        <a href="#">Developed by Data App LLC admin@aioftheworld.com </a>
-                                        <a href="#">Last Updated. {new Date().getUTCFullYear()}</a>
+                                                                                <a href="#">Last Updated: {formattedDate}</a>
+
                                     </li>
-                                   
-                                   
                                 </ul>
                             </div>
                         </div>
@@ -52,7 +59,7 @@ export default function Page() {
                         <div className="col-lg-12">
                             <div className="under-footer">
                                 <p>
-                                    Copyright © {new Date().getFullYear()} MDC. All Rights Reserved.
+                                    Copyright ©  MDC. All Rights Reserved.
                                 </p>
                                 <ul>
                                     <li><a href="#"><i className="fa fa-facebook" /></a></li>
