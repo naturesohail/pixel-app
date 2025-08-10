@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       website,
       businessDescription,
       password: hashedPassword,
-      companyName: companyName || "", // Handle optional field
+      companyName: companyName || "",
     });
 
     return NextResponse.json({ createUser }, { status: 200 });

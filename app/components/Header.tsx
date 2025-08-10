@@ -173,7 +173,6 @@ export default function Header() {
                         <button
                           onClick={() => {
                             logout();
-                            setDropdownOpen(false);
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-gray-200 text-gray-800"
                         >

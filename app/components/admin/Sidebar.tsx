@@ -1,24 +1,29 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
-  HomeIcon,
   Squares2X2Icon,
-  ViewfinderCircleIcon,
   TagIcon, 
   CubeIcon,
   QuestionMarkCircleIcon,
   UserGroupIcon,
-  ScaleIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
+import { useAuth } from '@/app/context/AuthContext';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
   const [isPixelsOpen, setIsPixelsOpen] = useState(false);
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login'); // Redirect immediately
+  };
 
   const menuItems = [
     { name: 'Dashboard', icon: Squares2X2Icon, path: '/admin/dashboard' },
@@ -27,23 +32,19 @@ export default function Sidebar() {
       icon: CubeIcon,  
       path: '/admin/pixels',
       subItems: [
-        // { name: 'Categories', icon: TagIcon, path: '/admin/categories' },
         { name: 'Pixels', icon: CubeIcon, path: '/admin/pixels' }, 
       ] 
     },
     { name: 'Bidders', icon: UserGroupIcon, path: '/admin/bidders' },
-    // { name: 'Bids', icon: ScaleIcon, path: '/admin/bids' },
     { name: 'Queries', icon: QuestionMarkCircleIcon, path: '/admin/queries' },
-
+    { name: 'Settings', icon: TagIcon, path: '/admin/settings' },
   ];
-
 
   return (
     <aside className={clsx(
       'fixed left-0 top-0 h-full bg-white shadow-lg transition-all duration-300 z-10',
       isOpen ? 'w-64' : 'w-20'
     )}>
-
       <div className="p-4">
         <h1 className={clsx(
           'font-bold text-gray-800 transition-all duration-300 flex items-center',
@@ -51,7 +52,6 @@ export default function Sidebar() {
         )}>
           {isOpen ? "Admin Panel" : 'AP'}
         </h1>
-        
       </div>
 
       <nav className="mt-8 px-2">
@@ -112,6 +112,14 @@ export default function Sidebar() {
             )}
           </div>
         ))}
+
+        {/* Logout button */}
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+        >
+          Logout
+        </button>
       </nav>
     </aside>
   );
