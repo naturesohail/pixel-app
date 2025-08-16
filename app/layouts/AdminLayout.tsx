@@ -15,7 +15,6 @@ import useAdminAuth from "../hooks/useAdminAuth";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
 
-   
 
   useAdminAuth()
   return (

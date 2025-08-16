@@ -5,7 +5,7 @@ const bidSchema = new Schema(
   {
     title: {
       type: String,
-  
+
     },
     description: {
       type: String,
@@ -13,7 +13,7 @@ const bidSchema = new Schema(
     },
     images: {
       type: [String],
-  
+
       default: [],
     },
     url: {
@@ -43,9 +43,9 @@ const bidSchema = new Schema(
       // required: true,
     },
     bidPerPixel: {
-       type: Number, 
-       required: false 
-   },
+      type: Number,
+      required: false
+    },
     bidIndex: {
       // New field to track which product index this bid is for
       type: Number,
@@ -76,6 +76,13 @@ const bidSchema = new Schema(
     stripeSessionId: {
       type: String,
     },
+    paid: {
+      type: Boolean,
+      default: false
+    },
+    paymentDate: {
+      type: Date
+    }
   },
   { timestamps: true }
 );

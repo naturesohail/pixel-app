@@ -1,3 +1,4 @@
+// app/api/admin/dashboard/route.ts
 import { NextResponse } from "next/server";
 import dbConnect from "@/app/lib/db";
 import User from "@/app/lib/models/userModel";
@@ -5,59 +6,120 @@ import Bid from "@/app/lib/models/bidModel";
 import Transaction from "@/app/lib/models/transactionModel";
 import { getSession } from "@/app/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await dbConnect();
-    
+
+    // Verify admin
     const session = await getSession();
-    if (!session || !session.user ) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [totalTransactions, activeBids, totalUsers, revenueResult, transactions, monthlyRevenue] = await Promise.all([
-      Transaction.countDocuments({ status: 'completed' }),
-      Bid.countDocuments({ status: 'active' }),
+    const { searchParams } = new URL(req.url);
+    const filter = searchParams.get("filter") || "year"; // default yearly
+
+    // Common stats
+    const [totalTransactions, activeBids, totalUsers, revenueResult, transactions] = await Promise.all([
+      Transaction.countDocuments({ status: "completed" }),
+      Bid.countDocuments({ status: "active" }),
       User.countDocuments({ isAdmin: false }),
       Transaction.aggregate([
-        { $match: { status: 'completed' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+        { $match: { status: "completed" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      Transaction.find({ status: 'completed' })
+      Transaction.find({ status: "completed" })
         .sort({ transactionDate: -1 })
         .limit(5)
-        .populate('userId', 'name email')
-        .populate('productId', 'title'),
-      Transaction.aggregate([
-        { $match: { status: 'completed' } },
-        {
-          $group: {
-            _id: { $month: "$transactionDate" },
-            total: { $sum: "$amount" }
-          }
-        },
-        { $sort: { "_id": 1 } }
-      ])
+        .populate("userId", "name email")
+        .populate("productId", "title"),
     ]);
 
     const revenue = revenueResult[0]?.total || 0;
 
+    let revenueData;
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const revenueByMonth = Array(12).fill(0);
 
-    monthlyRevenue.forEach(m => {
-      revenueByMonth[m._id - 1] = m.total; 
-    });
+    if (filter === "year" || filter === "prevYear") {
+      const currentYear = new Date().getFullYear();
+      const year = filter === "prevYear" ? currentYear - 1 : currentYear;
 
-    const revenueData = {
-      labels: months,
-      datasets: [
+      const monthlyRevenue = await Transaction.aggregate([
         {
-          label: 'Revenue ($)',
-          data: revenueByMonth,
-          backgroundColor: 'rgba(79, 70, 229, 0.8)',
+          $match: {
+            status: "completed",
+            transactionDate: {
+              $gte: new Date(`${year}-01-01`),
+              $lte: new Date(`${year}-12-31`),
+            },
+          },
         },
-      ],
-    };
+        {
+          $group: {
+            _id: { $month: "$transactionDate" },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { "_id": 1 } },
+      ]);
+
+      const revenueByMonth = Array(12).fill(0);
+      monthlyRevenue.forEach((m) => {
+        if (m._id >= 1 && m._id <= 12) {
+          revenueByMonth[m._id - 1] = m.total;
+        }
+      });
+
+      revenueData = {
+        labels: months,
+        datasets: [
+          {
+            label: `Revenue ${year} ($)`,
+            data: revenueByMonth,
+            backgroundColor: filter === "prevYear" ? "rgba(239, 68, 68, 0.8)" : "rgba(79, 70, 229, 0.8)", // red for prev year
+          },
+        ],
+      };
+    } else if (filter === "today") {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const hourlyRevenue = await Transaction.aggregate([
+        {
+          $match: {
+            status: "completed",
+            transactionDate: { $gte: startOfDay, $lte: endOfDay },
+          },
+        },
+        {
+          $group: {
+            _id: { $hour: "$transactionDate" },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { "_id": 1 } },
+      ]);
+
+      const revenueByHour = Array(24).fill(0);
+      hourlyRevenue.forEach((h) => {
+        if (h._id >= 0 && h._id <= 23) {
+          revenueByHour[h._id] = h.total;
+        }
+      });
+
+      revenueData = {
+        labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+        datasets: [
+          {
+            label: "Revenue Today ($)",
+            data: revenueByHour,
+            backgroundColor: "rgba(34, 197, 94, 0.8)",
+          },
+        ],
+      };
+    }
 
     return NextResponse.json({
       totalTransactions,
@@ -65,20 +127,17 @@ export async function GET() {
       totalUsers,
       revenue,
       revenueData,
-      recentTransactions: transactions.map(t => ({
+      recentTransactions: transactions.map((t) => ({
         id: t._id,
-        userName: t.userId?.name || 'Unknown',
-        productName: t.productId?.title || 'Unknown',
+        userName: t.userId?.name || "Unknown",
+        productName: t.productId?.title || "Unknown",
         amount: t.amount,
         date: new Date(t.transactionDate).toLocaleDateString(),
-        status: t.status
-      }))
+        status: t.status,
+      })),
     });
   } catch (error) {
     console.error("Dashboard error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import Link from "next/link";
 import { AtSymbolIcon, LockClosedIcon } from "@heroicons/react/24/outline";
@@ -12,10 +12,24 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user } = useAuth(); // Removed isAuthenticated
+
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!email || !password) {
+      Swal.fire({
+        title: "Validation Error",
+        text: "Please enter both email and password",
+        icon: "warning",
+        confirmButtonColor: "#4f46e5",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -29,16 +43,22 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle specific errors
         if (data.error === "Account is disabled") {
           throw new Error("Your account has been disabled. Please contact support.");
+        }
+        if (data.error === "Account pending approval") {
+          throw new Error("Your account is pending approval. Please contact support.");
         }
         throw new Error(data.error || "Invalid credentials");
       }
 
       if (!data.user?.isActive) {
-        throw new Error("Your account has been disabled or pending for approval. Please contact support.");
+        throw new Error("Your account has been disabled. Please contact support.");
       }
 
+      localStorage.setItem("authToken", data.token);
+      
       login(data.user);
 
       Swal.fire({
@@ -48,17 +68,16 @@ export default function Login() {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userData", JSON.stringify(data.user));
-
-      if (data.user?.isAdmin) {
+        if (data.user?.isAdmin) {
           router.push("/admin/dashboard");
         } else {
           router.push("/");
         }
-
       });
     } catch (error: any) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userData");
+      
       Swal.fire({
         title: "Login Failed!",
         text: error.message || "Something went wrong. Please try again.",
@@ -69,7 +88,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center p-4">

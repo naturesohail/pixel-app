@@ -132,6 +132,7 @@ export default function Register() {
 
         <form className="p-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
+            {/* Full Name */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <UserIcon className="h-5 w-5 text-gray-400" />
@@ -140,13 +141,14 @@ export default function Register() {
                 id="name"
                 type="text"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Full name"
               />
             </div>
 
+            {/* Company Name */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
@@ -155,13 +157,14 @@ export default function Register() {
                 id="companyName"
                 type="text"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Company name"
               />
             </div>
 
+            {/* Email */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <AtSymbolIcon className="h-5 w-5 text-gray-400" />
@@ -170,13 +173,14 @@ export default function Register() {
                 id="email"
                 type="email"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
               />
             </div>
 
+            {/* Phone */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <PhoneIcon className="h-5 w-5 text-gray-400" />
@@ -185,14 +189,14 @@ export default function Register() {
                 id="phone"
                 type="tel"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Phone number"
               />
             </div>
 
-            {/* Dynamic Industry Dropdown */}
+            {/* Industry */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <BriefcaseIcon className="h-5 w-5 text-gray-400" />
@@ -201,7 +205,7 @@ export default function Register() {
                 id="industry"
                 required
                 disabled={fetchingIndustries || !!fetchError}
-                className={`block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none ${
+                className={`block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none placeholder-black ${
                   fetchingIndustries || fetchError ? 'bg-gray-100' : 'bg-white'
                 }`}
                 value={industry}
@@ -212,18 +216,9 @@ export default function Register() {
                   <option key={ind._id} value={ind._id}>{ind.industry}</option>
                 ))}
               </select>
-              {fetchingIndustries && (
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <div className="spinner spinner-sm text-gray-500" />
-                </div>
-              )}
-              {fetchError && (
-                <p className="mt-1 text-xs text-red-500">
-                  {fetchError} - Using default options
-                </p>
-              )}
             </div>
 
+            {/* Website */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <GlobeAltIcon className="h-5 w-5 text-gray-400" />
@@ -232,13 +227,14 @@ export default function Register() {
                 id="website"
                 type="url"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="Business URL"
               />
             </div>
 
+            {/* Business Description */}
             <div className="relative">
               <div className="absolute top-3 left-3 flex items-start pointer-events-none">
                 <DocumentTextIcon className="h-5 w-5 text-gray-400" />
@@ -247,13 +243,14 @@ export default function Register() {
                 id="businessDescription"
                 required
                 rows={3}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={businessDescription}
                 onChange={(e) => setBusinessDescription(e.target.value)}
                 placeholder="Business Description"
               />
             </div>
 
+            {/* Password */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <LockClosedIcon className="h-5 w-5 text-gray-400" />
@@ -262,13 +259,14 @@ export default function Register() {
                 id="password"
                 type="password"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
               />
             </div>
 
+            {/* Confirm Password */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <LockClosedIcon className="h-5 w-5 text-gray-400" />
@@ -277,7 +275,7 @@ export default function Register() {
                 id="confirmPassword"
                 type="password"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm Password"
@@ -285,6 +283,7 @@ export default function Register() {
             </div>
           </div>
 
+          {/* Terms */}
           <div className="flex items-center">
             <input
               id="terms"
@@ -298,6 +297,7 @@ export default function Register() {
             </label>
           </div>
 
+          {/* Button */}
           <button
             type="submit"
             disabled={loading || fetchingIndustries}
@@ -325,7 +325,7 @@ export default function Register() {
         </form>
       </div>
       
-      {/* Add spinner styles */}
+      {/* Spinner CSS */}
       <style jsx global>{`
         .spinner {
           display: inline-block;

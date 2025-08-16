@@ -1,4 +1,3 @@
-// app/components/admin/Dashboard.tsx
 'use client';
 import AdminLayout from '@/app/layouts/AdminLayout';
 import { ShoppingCartIcon, TagIcon, UsersIcon, CurrencyDollarIcon, ChartBarIcon } from '@heroicons/react/24/outline';

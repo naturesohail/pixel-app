@@ -32,7 +32,7 @@ export default function PixelMarketplace() {
           text: "No auction zone specified",
           icon: "error",
           confirmButtonColor: "#4f46e5",
-          confirmButtonText: "Go Home",
+          confirmButtonText: "Gos Home",
         }).then(() => router.push("/"));
         return;
       }
@@ -72,7 +72,7 @@ export default function PixelMarketplace() {
         text: "No auction zone specified",
         icon: "error",
         confirmButtonColor: "#4f46e5",
-        confirmButtonText: "Go Home",
+        confirmButtonText: "Gos Home",
       }).then(() => router.push("/"));
       return;
     }
@@ -169,35 +169,9 @@ export default function PixelMarketplace() {
   };
 
 
-  const handlePayment = async (bidId: string) => {
-    try {
-      const response = await fetch("/api/payment/create-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bidId,
-          zoneId,
-          amount: highestBid,
-          pixelCount: activeAuctionZone.totalPixels
-        })
-      });
 
-      const data = await response.json();
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("Failed to create payment session");
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      Swal.fire({
-        title: "Payment Failed",
-        text: "Could not initiate payment. Please try again.",
-        icon: "error",
-        confirmButtonColor: "#4f46e5",
-      });
-    }
+  const handlePayment = async (bid: any) => {
+     router.push(`/winner-payment/${bid._id}?zoneId=${zoneId}&bidAmount=${bid.bidAmount}`);
   };
 
   const renderCountdown = ({ days, hours, minutes, seconds, completed }: any) => {
@@ -211,7 +185,6 @@ export default function PixelMarketplace() {
     );
   };
 
-  const userHasBid = userId && bids.some(bid => bid.userId.toString() === userId);
 
   return (
     <FrontendLayout>
@@ -303,7 +276,6 @@ export default function PixelMarketplace() {
                 )}
               </div>
 
-              {/* {!userHasBid && !auctionEnded && activeAuctionZone?._id && ( */}
               {!auctionEnded && activeAuctionZone?._id && (
 
                 <BidForm
@@ -388,7 +360,7 @@ export default function PixelMarketplace() {
                           bid.userId.toString() === userId && (
                             <div className="mt-3">
                               <button
-                                onClick={() => handlePayment(bid._id)}
+                                onClick={() => handlePayment(bid)}
                                 className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition"
                               >
                                 Complete Payment

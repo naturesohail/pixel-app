@@ -159,17 +159,7 @@ useEffect(() => {
 
     fetchStripeKey();
   }, []);
-  const incrementCount = () => {
-    if (pixelGrid && pixelCount < pixelGrid.config.availablePixels) {
-      setPixelCount(pixelCount + 1);
-    }
-  };
-
-  const decrementCount = () => {
-    if (pixelGrid && pixelCount > pixelGrid.config.minimumOrderQuantity) {
-      setPixelCount(pixelCount - 1);
-    }
-  };
+  
 
   const totalPrice =
     activeAuctionZone?.totalPixels * (activeAuctionZone?.buyNowPrice || 0);

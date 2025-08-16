@@ -50,9 +50,7 @@ const processedImages: string[] = [];
     if (processedImages.length === 0) {
       throw new Error("At least one product image is required");
     }
-    // if (uploadedImages.length === 0) {
-    //   return NextResponse.json({ error: "At least one image is required" }, { status: 400 });
-    // }
+   
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

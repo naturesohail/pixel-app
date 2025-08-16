@@ -36,7 +36,10 @@ export default function AuctionCard({ config, products }: any) {
   const windowWidth = window.innerWidth || 1366;
   const windowHeight = window.innerHeight || 1920;
   const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
+  const [showLoginAlert, setShowLoginAlert] = useState(false);
+
   const productMap = useRef<Record<number, Product>>({});
+  const dragJustEnded = useRef(false); // Track if drag just ended
 
   const isAreaOverlapping = useCallback(
     (x: number, y: number, width: number, height: number): boolean => {
@@ -127,7 +130,6 @@ export default function AuctionCard({ config, products }: any) {
   const minBuyNowPrice = config?.oneTimePrice;
   const minPixelPrice = config?.pixelPrice;
 
-
   const findProductsInArea = useCallback(
     (x: number, y: number, width: number, height: number): Product[] => {
       const productSet = new Set<Product>();
@@ -194,11 +196,9 @@ export default function AuctionCard({ config, products }: any) {
     canvas.width = viewWidth;
     canvas.height = viewHeight;
 
-    // Draw white background
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid lines within view window
     ctx.strokeStyle = "#e0e0e0";
     ctx.lineWidth = 0.5;
     for (let col = viewX; col <= viewX + viewSize; col++) {
@@ -214,7 +214,6 @@ export default function AuctionCard({ config, products }: any) {
       ctx.stroke();
     }
 
-    // Draw auction zones in view
     auctionZones.forEach((zone) => {
       if (
         zone.x + zone.width >= viewX &&
@@ -297,12 +296,10 @@ export default function AuctionCard({ config, products }: any) {
       }
     });
 
-    // Draw current selection in view
     if (isAuthUser && currentSelection) {
       const selX = (currentSelection.x - viewX) * pixelSize;
       const selY = (currentSelection.y - viewY) * pixelSize;
 
-      // Check if current selection overlaps with any existing zone
       const isOverlapping = isAreaOverlapping(
         currentSelection.x,
         currentSelection.y,
@@ -329,13 +326,11 @@ export default function AuctionCard({ config, products }: any) {
         currentSelection.height * pixelSize
       );
 
-      // Show alert if overlapping during drag
       if (isDragging && isOverlapping) {
         showOverlapWarning();
       }
     }
 
-    // Draw products in view
     const renderedProductIds = new Set<string>();
     products?.forEach((product: any) => {
       if (
@@ -398,7 +393,14 @@ export default function AuctionCard({ config, products }: any) {
   ]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isAuthUser) return;
+    if (!isAuthUser) {
+      setShowLoginAlert(true);
+      setTimeout(() => setShowLoginAlert(false), 3000);
+      return;
+    }
+
+    if (hoveredZone || hoveredProduct) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -465,7 +467,6 @@ export default function AuctionCard({ config, products }: any) {
     const x = Math.floor(mouseX / pixelSize);
     const y = Math.floor(mouseY / pixelSize);
 
-    // Check for product hover
     const product = productMap.current[y * cols + x];
     if (product) {
       setHoveredProduct(product);
@@ -486,6 +487,10 @@ export default function AuctionCard({ config, products }: any) {
   };
 
   const handleMouseUp = () => {
+    if (isDragging) {
+      dragJustEnded.current = true;
+    }
+
     if (!isAuthUser || !isDragging || !currentSelection) {
       setIsDragging(false);
       return;
@@ -617,6 +622,12 @@ export default function AuctionCard({ config, products }: any) {
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    // Skip click if we just finished dragging
+    if (dragJustEnded.current) {
+      dragJustEnded.current = false;
+      return;
+    }
+
     if (!hoveredZone?.isEmpty && hoveredZone?.products?.url) {
       window.open(hoveredZone.products.url, "_blank");
       return;
@@ -646,12 +657,9 @@ export default function AuctionCard({ config, products }: any) {
 
     if (product) {
       router.push(`/product/${product._id}`);
-      return;
     }
   };
    
-
-
   useEffect(() => {
     drawCanvas();
   }, [drawCanvas]);
@@ -661,25 +669,26 @@ export default function AuctionCard({ config, products }: any) {
       <div className="card million-dollar-style">
         <div className="card-body">
           <div className="position-relative">
-            {showOverlapAlert && (
-              <div
-                style={{
-                  position: "fixed",
-                  top: "20px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  backgroundColor: "#ff4444",
-                  color: "white",
-                  padding: "10px 20px",
-                  borderRadius: "5px",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                  zIndex: 2000,
-                  animation: "fadeInOut 2s ease-in-out",
-                }}
-              >
-                Warning: This area overlaps with an existing zone!
-              </div>
-            )}
+            {showLoginAlert && (
+          <div
+            style={{
+              position: "fixed",
+              top: "20px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              backgroundColor: "#ff4444",
+              color: "white",
+              padding: "10px 20px",
+              borderRadius: "5px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+              zIndex: 2000,
+              animation: "fadeInOut 2s ease-in-out",
+            }}
+          >
+            You need to log in first to create an auction zone.
+          </div>
+        )}
+
 
             <div
               ref={containerRef}
@@ -1034,4 +1043,3 @@ export default function AuctionCard({ config, products }: any) {
     </div>
   );
 }
-

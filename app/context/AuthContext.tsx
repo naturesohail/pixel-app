@@ -35,32 +35,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
-        credentials: "include"
+        credentials: "include",
       });
-      setUser(null);
-      localStorage.removeItem("userData");
     } catch (error) {
       console.error("Logout failed:", error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem("userData");
+      localStorage.removeItem("authToken");
     }
   };
+
   useEffect(() => {
     async function checkLogin() {
       setIsLoading(true);
-      const localUser = localStorage.getItem("userData");
 
+      const localUser = localStorage.getItem("userData");
       if (localUser) {
         try {
           const parsedUser = JSON.parse(localUser);
-          setUser(parsedUser);
+
+            const res = await fetch("/api/auth/me", {
+            method: "GET",
+            credentials: "include",
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+
+            if (data.user?.isActive) {
+              setUser(data.user);
+              localStorage.setItem("userData", JSON.stringify(data.user));
+            } else {
+              await logout();
+            }
+          } else {
+            await logout();
+          }
         } catch (e) {
-          localStorage.removeItem("userData");
+          console.error("Auth check failed:", e);
+          await logout();
         } finally {
           setIsLoading(false);
         }
-        return; // Exit early if we had local user data
+        return;
       }
 
-      // Only make API call if no local user data exists
       try {
         const res = await fetch("/api/auth/me", {
           method: "GET",
@@ -69,16 +89,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (res.ok) {
           const data = await res.json();
-          setUser(data.user);
-          localStorage.setItem("userData", JSON.stringify(data.user));
+          if (data.user?.isActive) {
+            setUser(data.user);
+            localStorage.setItem("userData", JSON.stringify(data.user));
+          } else {
+            await logout();
+          }
         } else {
-          setUser(null);
-          localStorage.removeItem("userData");
+          await logout();
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-        setUser(null);
-        localStorage.removeItem("userData");
+        await logout();
       } finally {
         setIsLoading(false);
       }
@@ -86,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkLogin();
   }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -93,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoggedIn: !!user,
         isLoading,
         login,
-        logout
+        logout,
       }}
     >
       {children}
