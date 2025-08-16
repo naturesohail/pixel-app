@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       bidAmount,
     } = body;
 
+    // Process images
     const processedImages: string[] = [];
     for (const image of productData.images) {
       if (image.startsWith("data:image")) {
@@ -55,28 +56,36 @@ export async function POST(request: Request) {
 
     let lineItems: any[] = [];
     let productName = "";
+    let paymentAmount = 0;
 
     // Handle winner bid payment
     if (isWinnerPayment && bidId) {
       // Validate winning bid
       const bid = await Bid.findById(bidId);
-      if (!bid || bid.userId.toString() !== userId) {
+      if (!bid) {
         return NextResponse.json(
-          { error: "Invalid winning bid" },
-          { status: 400 }
+          { error: "Bid not found" },
+          { status: 404 }
+        );
+      }
+      
+      if (bid.userId.toString() !== userId) {
+        return NextResponse.json(
+          { error: "You are not authorized to pay for this bid" },
+          { status: 403 }
         );
       }
 
       // Check if already paid
       if (bid.paid) {
         return NextResponse.json(
-          { error: "Bid already paid" },
+          { error: "This bid has already been paid" },
           { status: 400 }
         );
       }
 
       // Use bid amount for payment
-      const paymentAmount = bidAmount || totalPrice;
+      paymentAmount = bidAmount || totalPrice;
       productName = `Winning Bid - ${productData.title || 'Auction Zone'}`;
       
       lineItems = [{
@@ -100,16 +109,20 @@ export async function POST(request: Request) {
     // Handle one-time purchase
     else {
       if (processedImages.length === 0) {
-        throw new Error("At least one product image is required");
+        return NextResponse.json(
+          { error: "At least one product image is required" },
+          { status: 400 }
+        );
       }
 
+      paymentAmount = totalPrice;
       productName = `${productData.title} (${pixelCount} pixels)`;
       
       lineItems = [{
         price_data: {
           currency: 'usd',
           product_data: { name: productName },
-          unit_amount: Math.round(totalPrice * 100),
+          unit_amount: Math.round(paymentAmount * 100),
         },
         quantity: 1,
       }];
@@ -118,7 +131,7 @@ export async function POST(request: Request) {
       metadata = {
         ...metadata,
         paymentType: "one-time",
-        totalPrice: totalPrice.toString(),
+        totalPrice: paymentAmount.toString(),
         isOneTimePurchase: isOneTimePurchase ? "true" : "false",
         targetZoneId: targetZoneId || "",
       };

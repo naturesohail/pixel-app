@@ -9,9 +9,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 interface ProductForm {
   title: string;
-  description: string;
   price: number;
-  category: string;
   images: string[];
   url?: string;
 }
@@ -24,42 +22,49 @@ export default function WinnerPaymentPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [productForm, setProductForm] = useState<ProductForm>({
     title: "",
-    description: "",
     price: 0,
-    category: "",
     images: [],
   });
   
   const searchParams = useSearchParams();
   const params = useParams();
-  const bidId = Array.isArray(params?.bidId) ? params.bidId[0] : params?.bidId;
-  const zoneId = searchParams.get('zoneId');
-  const bidAmount = parseFloat(searchParams.get('bidAmount') || "0");
+  
+  // Decode parameters safely
+  const bidId = Array.isArray(params?.bidId) 
+    ? decodeURIComponent(params.bidId[0]) 
+    : params?.bidId 
+      ? decodeURIComponent(params.bidId) 
+      : null;
+  
+  const zoneId = searchParams.get('zoneId') 
+    ? decodeURIComponent(searchParams.get('zoneId')!) 
+    : null;
+  
+  const bidAmountParam = searchParams.get('bidAmount');
+  const bidAmount = bidAmountParam ? parseFloat(decodeURIComponent(bidAmountParam)) : 0;
   
   const [auctionZone, setAuctionZone] = useState<any>(null);
+  const [isValidParams, setIsValidParams] = useState(false);
 
   useEffect(() => {
+    // Validate parameters
+    if (!bidId || !zoneId || isNaN(bidAmount) || bidAmount <= 0) {
+      setError("Invalid payment parameters. Please ensure all required information is provided.");
+      setLoading(false);
+      return;
+    }
+    
+    setIsValidParams(true);
     const checkAuthAndFetchData = async () => {
-      if (!bidId || !zoneId || !bidAmount) {
-        Swal.fire({
-          title: "Invalid Payment Request",
-          text: "Missing required payment information",
-          icon: "error",
-          confirmButtonColor: "#4f46e5",
-          confirmButtonText: "Go Home",
-        }).then(() => router.push("/"));
-        return;
-      }
-
       try {
         const storedUser = localStorage.getItem("userData");
         if (!storedUser) {
-          throw new Error("No user session");
+          throw new Error("No user session found");
         }
 
         const parsed = JSON.parse(storedUser);
         if (!parsed?._id) {
-          throw new Error("Invalid user session");
+          throw new Error("Invalid user session data");
         }
 
         setUserId(parsed._id);
@@ -68,7 +73,7 @@ export default function WinnerPaymentPage() {
         console.error("Authentication error:", err);
         Swal.fire({
           title: "Login Required",
-          text: "You need to log in to complete payment",
+          text: "You need to log in to complete this payment",
           icon: "warning",
           confirmButtonColor: "#4f46e5",
           confirmButtonText: "Go to Login",
@@ -81,16 +86,16 @@ export default function WinnerPaymentPage() {
 
   const fetchAuctionZone = async () => {
     try {
-      const res = await fetch(`/api/pixels/bid/zone?zoneId=${zoneId}`);
-      if (!res.ok) throw new Error('Failed to fetch zone data');
+      const res = await fetch(`/api/pixels/bid/zone?zoneId=${encodeURIComponent(zoneId!)}`);
+      if (!res.ok) throw new Error('Failed to fetch zone data. Please try again later.');
       
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Zone not found');
+      if (!data.success) throw new Error(data.error || 'Auction zone not found');
       
       setAuctionZone(data.zone);
       setLoading(false);
     } catch (error: any) {
-      setError(error.message);
+      setError(error.message || "Failed to load auction data");
       setLoading(false);
     }
   };
@@ -128,8 +133,8 @@ export default function WinnerPaymentPage() {
   const handlePayment = async () => {
     if (!userId || !auctionZone || !bidId) {
       Swal.fire({
-        title: "Error",
-        text: "Missing required information",
+        title: "Missing Information",
+        text: "Required payment information is incomplete. Please try again.",
         icon: "error",
       });
       return;
@@ -137,36 +142,38 @@ export default function WinnerPaymentPage() {
 
     setIsProcessing(true);
     try {
+      const payload = {
+        userId,
+        bidId,
+        zoneId: auctionZone._id,
+        amount: bidAmount,
+        pixelCount: auctionZone.totalPixels,
+        productData: productForm,
+        isWinnerPayment: true
+      };
+
       const response = await fetch("/api/payment/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          bidId,
-          zoneId: auctionZone._id,
-          amount: bidAmount,
-          pixelCount: auctionZone.totalPixels,
-          productData: productForm,
-          isWinnerPayment: true
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data.error || "Payment processing failed");
       }
 
       if (data.url) {
         window.location.href = data.url; 
       } else {
-        throw new Error("Missing checkout session URL");
+        throw new Error("Missing payment session URL");
       }
     } catch (error: any) {
       console.error("Payment error:", error);
       Swal.fire({
         title: "Payment Failed",
-        text: error.message || "Something went wrong",
+        text: error.message || "An error occurred during payment processing",
         icon: "error",
       });
     } finally {
@@ -178,24 +185,40 @@ export default function WinnerPaymentPage() {
     return (
       <FrontendLayout>
         <Header />
-        <div className="container py-5 text-center">Loading payment details...</div>
+        <div className="container py-5 text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading payment details...</p>
+        </div>
         <Footer />
       </FrontendLayout>
     );
   }
 
-  if (error) {
+  if (error || !isValidParams) {
     return (
       <FrontendLayout>
         <Header />
         <div className="container py-5">
-          <div className="alert alert-danger">{error}</div>
-          <button 
-            className="btn btn-primary mt-3"
-            onClick={() => router.push('/')}
-          >
-            Go Home
-          </button>
+          <div className="alert alert-danger text-center">
+            <h4 className="alert-heading">Payment Error</h4>
+            <p>{error || "Invalid payment parameters"}</p>
+            <div className="d-flex justify-content-center mt-3">
+              <button 
+                className="btn btn-primary me-2"
+                onClick={() => router.push('/auctions')}
+              >
+                Browse Auctions
+              </button>
+              <button 
+                className="btn btn-outline-secondary"
+                onClick={() => router.push('/dashboard')}
+              >
+                My Dashboard
+              </button>
+            </div>
+          </div>
         </div>
         <Footer />
       </FrontendLayout>
@@ -222,20 +245,16 @@ export default function WinnerPaymentPage() {
           <div className="card-body">
             <div className="row">
               <div className="col-md-6">
-                <div className="pixel-visualization mb-4">
+                <div className="pixel-visualization mb-4 text-center">
                   <div
-                    className="pixel-box"
+                    className="pixel-box mx-auto"
                     style={{
                       width: "100px",
                       height: "100px",
                       backgroundColor: "#f0f0f0",
                       border: "1px solid #ddd",
-                      margin: "0 auto",
                     }}
                   />
-                  {/* <div className="text-center mt-2">
-                    <small>Auction Zone: {auctionZone.name}</small>
-                  </div> */}
                 </div>
               </div>
               <div className="col-md-6">
@@ -245,7 +264,14 @@ export default function WinnerPaymentPage() {
                     <span>Your Winning Bid Amount:</span>
                     <strong>${bidAmount.toFixed(2)}</strong>
                   </div>
-                 
+                  <div className="d-flex justify-content-between mt-2">
+                    <span>Total Pixels:</span>
+                    <strong>{auctionZone?.totalPixels || 0}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between mt-2">
+                    <span>Price Per Pixel:</span>
+                    <strong>${(bidAmount / auctionZone?.totalPixels).toFixed(4)}</strong>
+                  </div>
                 </div>
               </div>
             </div>
@@ -266,10 +292,12 @@ export default function WinnerPaymentPage() {
                       })
                     }
                     required
+                    placeholder="Enter a title for your pixel content"
                   />
                 </div>
+                
                 <div className="mb-3">
-                  <label className="form-label">Pixel Images</label>
+                  <label className="form-label">Pixel Image</label>
                   <input
                     type="file"
                     className="form-control"
@@ -314,6 +342,7 @@ export default function WinnerPaymentPage() {
                     ))}
                   </div>
                 </div>
+                
                 <div className="mb-3">
                   <label className="form-label">Pixel URL</label>
                   <input
@@ -323,6 +352,7 @@ export default function WinnerPaymentPage() {
                     onChange={(e) =>
                       setProductForm({ ...productForm, url: e.target.value })
                     }
+                    placeholder="https://example.com"
                   />
                 </div>
                 
@@ -333,10 +363,18 @@ export default function WinnerPaymentPage() {
                     onClick={handlePayment}
                     disabled={
                       isProcessing ||
-                      !productForm.title 
+                      !productForm.title ||
+                      loading
                     }
                   >
-                    {isProcessing ? "Processing Payment..." : "Complete Payment Now"}
+                    {isProcessing ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Processing Payment...
+                      </>
+                    ) : (
+                      "Complete Payment Now"
+                    )}
                   </button>
                 </div>
               </form>

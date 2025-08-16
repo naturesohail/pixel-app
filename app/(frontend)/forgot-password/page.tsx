@@ -9,7 +9,7 @@ import { AtSymbolIcon } from "@heroicons/react/24/outline";
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter(); // Add useRouter hook
+  const router = useRouter(); 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +26,13 @@ export default function ForgotPassword() {
 
       if (!response.ok) throw new Error(data.message || "Something went wrong");
 
-      // Show success message and redirect after user closes the alert
       Swal.fire({
         title: "Email Sent!",
         text: "Check your email for password reset instructions",
         icon: "success",
         confirmButtonColor: "#4f46e5",
       }).then(() => {
-        router.push('/login'); // Redirect after user closes the alert
+        router.push('/login'); 
       });
     } catch (error: any) {
       Swal.fire({

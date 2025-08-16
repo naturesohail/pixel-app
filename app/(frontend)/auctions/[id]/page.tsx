@@ -8,7 +8,7 @@ import Link from "next/link";
 import Footer from "@/app/components/Footer";
 import Header from "@/app/components/Header";
 import FrontendLayout from "@/app/layouts/FrontendLayout";
-
+import Image from "next/image";
 
 export default function PixelMarketplace() {
   const params = useParams();
@@ -20,6 +20,14 @@ export default function PixelMarketplace() {
   const [highestBid, setHighestBid] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const router = useRouter();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBid, setSelectedBid] = useState<any>(null);
+  const [productForm, setProductForm] = useState({
+    title: "",
+    images: [] as string[],
+    url: ""
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const zoneId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [auctionEnded, setAuctionEnded] = useState(false);
@@ -32,7 +40,7 @@ export default function PixelMarketplace() {
           text: "No auction zone specified",
           icon: "error",
           confirmButtonColor: "#4f46e5",
-          confirmButtonText: "Gos Home",
+          confirmButtonText: "Go Home",
         }).then(() => router.push("/"));
         return;
       }
@@ -63,31 +71,6 @@ export default function PixelMarketplace() {
     };
 
     checkAuthAndFetchData();
-  }, [zoneId, router]);
-
-  useEffect(() => {
-    if (!zoneId) {
-      Swal.fire({
-        title: "Invalid Auction Zone",
-        text: "No auction zone specified",
-        icon: "error",
-        confirmButtonColor: "#4f46e5",
-        confirmButtonText: "Gos Home",
-      }).then(() => router.push("/"));
-      return;
-    }
-
-    const storedUser = localStorage.getItem("userData");
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUserId(parsed?._id || null);
-      } catch (err) {
-        console.error("Failed to parse userData:", err);
-      }
-    }
-
-    fetchPixelData();
   }, [zoneId, router]);
 
   useEffect(() => {
@@ -168,10 +151,95 @@ export default function PixelMarketplace() {
     setHighestBid(newBid.bidAmount);
   };
 
+  const openPaymentModal = (bid: any) => {
+    setSelectedBid(bid);
+    setShowPaymentModal(true);
+    setProductForm({
+      title: "",
+      images: [],
+      url: ""
+    });
+  };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const newImages: string[] = [];
 
-  const handlePayment = async (bid: any) => {
-     router.push(`/winner-payment/${bid._id}?zoneId=${zoneId}&bidAmount=${bid.bidAmount}`);
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            newImages.push(event.target.result as string);
+            if (newImages.length === files.length) {
+              setProductForm(prev => ({
+                ...prev,
+                images: [...prev.images, ...newImages],
+              }));
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setProductForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handlePayment = async () => {
+    if (!userId || !selectedBid || !activeAuctionZone) {
+      Swal.fire({
+        title: "Error",
+        text: "Missing required information",
+        icon: "error",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const payload = {
+        userId,
+        bidId: selectedBid._id,
+        zoneId: activeAuctionZone._id,
+        bidAmount: selectedBid.bidAmount,
+        pixelCount: activeAuctionZone.totalPixels,
+        productData: productForm,
+        isWinnerPayment: true
+      };
+
+      const response = await fetch("/api/payment/create-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Payment failed");
+      }
+
+      if (data.url) {
+        window.location.href = data.url; 
+      } else {
+        throw new Error("Missing checkout session URL");
+      }
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      Swal.fire({
+        title: "Payment Failed",
+        text: error.message || "Something went wrong with your payment",
+        icon: "error",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const renderCountdown = ({ days, hours, minutes, seconds, completed }: any) => {
@@ -207,13 +275,11 @@ export default function PixelMarketplace() {
                     <p className="text-gray-600 mb-2">
                       <b>
                         Total Pixels: {activeAuctionZone?.totalPixels || 0}
-
                       </b>
                     </p>
                     <p className="text-gray-600 mb-2">
                       <b>
                         Size {activeAuctionZone.width} x {activeAuctionZone.height} Pixel
-
                       </b>
                     </p>
                   </div>
@@ -230,8 +296,6 @@ export default function PixelMarketplace() {
                   )}
                 </div>
 
-
-
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                   <h2 className="text-lg font-semibold text-yellow-800 mb-2">
                     Current Bidding Status
@@ -245,7 +309,6 @@ export default function PixelMarketplace() {
                       <p className="text-gray-600">Total Bids</p>
                       <p className="text-xl font-bold">{bids.length}</p>
                     </div>
-
                   </div>
                 </div>
 
@@ -277,7 +340,6 @@ export default function PixelMarketplace() {
               </div>
 
               {!auctionEnded && activeAuctionZone?._id && (
-
                 <BidForm
                   config={config}
                   activeAuctionZone={activeAuctionZone}
@@ -324,14 +386,13 @@ export default function PixelMarketplace() {
                                   <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
                                     Your Bid
                                   </span>
-                                 
                                 </>
                               )}
-                               {bid.bidAmount === highestBid && !auctionEnded && (
-                                    <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                      Highest Bid
-                                    </span>
-                                  )}
+                              {bid.bidAmount === highestBid && !auctionEnded && (
+                                <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                  Highest Bid
+                                </span>
+                              )}
                               {auctionEnded &&
                                 bid.bidAmount === highestBid && (
                                   <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
@@ -360,7 +421,7 @@ export default function PixelMarketplace() {
                           bid.userId.toString() === userId && (
                             <div className="mt-3">
                               <button
-                                onClick={() => handlePayment(bid)}
+                                onClick={() => openPaymentModal(bid)}
                                 className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition"
                               >
                                 Complete Payment
@@ -373,7 +434,118 @@ export default function PixelMarketplace() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
+        {/* Payment Modal */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">Complete Your Payment</h2>
+                  <button 
+                    onClick={() => setShowPaymentModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between mb-2">
+                    <span className="font-medium">Winning Bid Amount:</span>
+                    <span className="font-bold">${selectedBid?.bidAmount?.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="font-medium">Total Pixels:</span>
+                    <span className="font-bold">{activeAuctionZone?.totalPixels || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Price Per Pixel:</span>
+                    <span className="font-bold">
+                      ${(selectedBid?.bidAmount / activeAuctionZone?.totalPixels).toFixed(4)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium">Pixel Title*</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    value={productForm.title}
+                    onChange={(e) => setProductForm({...productForm, title: e.target.value})}
+                    placeholder="Enter title for your pixel content"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium">Pixel Image</label>
+                  <input
+                    type="file"
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    multiple
+                  />
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {productForm.images.map((img, index) => (
+                      <div key={index} className="relative w-16 h-16">
+                        <Image
+                          src={img}
+                          alt={`Preview ${index}`}
+                          fill
+                          className="object-cover rounded"
+                        />
+                        <button
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                          onClick={() => removeImage(index)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block mb-2 font-medium">Pixel URL</label>
+                  <input
+                    type="url"
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    value={productForm.url}
+                    onChange={(e) => setProductForm({...productForm, url: e.target.value})}
+                    placeholder="https://example.com"
+                  />
+                </div>
+
+                <button
+                  className={`w-full py-3 px-4 rounded-md text-white font-medium ${
+                    isProcessing || !productForm.title 
+                      ? "bg-gray-400 cursor-not-allowed" 
+                      : "bg-green-600 hover:bg-green-700"
+                  }`}
+                  onClick={handlePayment}
+                  disabled={isProcessing || !productForm.title}
+                >
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing Payment...
+                    </span>
+                  ) : (
+                    "Proceed to Payment"
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
