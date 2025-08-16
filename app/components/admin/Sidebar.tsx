@@ -8,7 +8,8 @@ import {
   CubeIcon,
   QuestionMarkCircleIcon,
   UserGroupIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useAuth } from '@/app/context/AuthContext';
@@ -22,11 +23,12 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login'); // Redirect immediately
+    router.push('/login');
   };
 
   const menuItems = [
     { name: 'Dashboard', icon: Squares2X2Icon, path: '/admin/dashboard' },
+    { name: 'Industries', icon: BuildingOfficeIcon, path: '/admin/industries' },
     { 
       name: 'Pixels', 
       icon: CubeIcon,  
@@ -38,6 +40,7 @@ export default function Sidebar() {
     { name: 'Bidders', icon: UserGroupIcon, path: '/admin/bidders' },
     { name: 'Queries', icon: QuestionMarkCircleIcon, path: '/admin/queries' },
     { name: 'Settings', icon: TagIcon, path: '/admin/settings' },
+    
   ];
 
   return (

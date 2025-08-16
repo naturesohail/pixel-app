@@ -1,3 +1,4 @@
+// app/components/admin/Dashboard.tsx
 'use client';
 import AdminLayout from '@/app/layouts/AdminLayout';
 import { ShoppingCartIcon, TagIcon, UsersIcon, CurrencyDollarIcon, ChartBarIcon } from '@heroicons/react/24/outline';
@@ -13,7 +14,6 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-
 
 ChartJS.register(
   CategoryScale,
@@ -37,6 +37,14 @@ type DashboardData = {
       backgroundColor: string;
     }[];
   };
+  recentTransactions: {
+    id: string;
+    userName: string;
+    productName: string;
+    amount: number;
+    date: string;
+    status: string;
+  }[];
 };
 
 export default function Dashboard() {
@@ -103,7 +111,15 @@ export default function Dashboard() {
           </div>
         </div>
 
-
+        <div className="bg-white p-4 rounded shadow">
+          <div className="flex items-center">
+            <TagIcon className="h-6 w-6 text-green-500 mr-2" />
+            <div>
+              <p className="text-sm text-gray-500">Active Bids</p>
+              <p className="text-xl font-bold">{data?.activeBids?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        </div>
 
         <div className="bg-white p-4 rounded shadow">
           <div className="flex items-center">
@@ -130,7 +146,7 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded shadow mb-8">
           <div className="flex items-center mb-4">
             <ChartBarIcon className="h-6 w-6 text-indigo-500 mr-2" />
-            <h2 className="text-xl font-bold">Revenue Overview</h2>
+            <h2 className="text-xl font-bold">Revenue Overview ({new Date().getFullYear()})</h2>
           </div>
           <div className="h-80">
             <Bar
@@ -144,7 +160,7 @@ export default function Dashboard() {
                   },
                   title: {
                     display: true,
-                    text: 'Revenue by Period',
+                    text: 'Monthly Revenue',
                   },
                 },
               }}
@@ -153,7 +169,55 @@ export default function Dashboard() {
         </div>
       )}
 
-      
+      <div className="bg-white p-6 rounded shadow">
+        <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
+        {data?.recentTransactions?.length ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {data.recentTransactions.map((transaction) => (
+                  <tr key={transaction.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{transaction.userName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{transaction.productName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">${transaction.amount.toFixed(2)}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {transaction.date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        transaction.status === 'completed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : transaction.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                      }`}>
+                        {transaction.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500">No recent transactions</p>
+        )}
+      </div>
     </AdminLayout>
   );
 }

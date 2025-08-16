@@ -62,9 +62,8 @@ export default function BuyItNowPage() {
     images: [],
     url: "",
   });
-console.log('activeAuctionZone :>> ', activeAuctionZone);
+// console.log('activeAuctionZone :>> ', activeAuctionZone);
   useEffect(() => {
-    // This effect runs only on client side
     if (typeof window !== "undefined") {
       const userData = localStorage.getItem("userData");
       if (userData) {
@@ -456,6 +455,7 @@ console.log('activeAuctionZone :>> ', activeAuctionZone);
                           >
                             ×
                           </button>
+                          
                         </div>
                       ))}
                     </div>

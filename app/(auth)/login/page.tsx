@@ -50,7 +50,13 @@ export default function Login() {
       }).then(() => {
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("userData", JSON.stringify(data.user));
-        router.push("/");
+
+      if (data.user?.isAdmin) {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/");
+        }
+
       });
     } catch (error: any) {
       Swal.fire({

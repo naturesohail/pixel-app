@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import User from "@/app/lib/models/userModel";
 import connectDB from "@/app/lib/db";
 import bcrypt from "bcryptjs";
-
+import mongoose from "mongoose";
+import industryModel from "@/app/lib/models/industryModel";
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -13,37 +14,34 @@ export async function POST(req: Request) {
       email, 
       phone, 
       password, 
-      industry, 
+      industry,   
       website,
       businessDescription,
-      companyName // New optional field
+      companyName 
     } = await req.json();
 
-    // Validate required fields (companyName is optional)
-    if (!name || !email || !password || !phone || !industry || !website || !businessDescription) { 
+    if (!mongoose.Types.ObjectId.isValid(industry)) {
+      return NextResponse.json({ error: "Invalid industry ID" }, { status: 400 });
+    }
+
+    const industryExists = await industryModel.findById(industry);
+    if (!industryExists) {
+      return NextResponse.json({ error: "Industry not found" }, { status: 404 });
+    }
+
+    if (!companyName || !name || !email || !password || !phone || !industry || !website || !businessDescription) { 
       return NextResponse.json(
-        { error: "All fields except company name are required" },
+        { error: "All fields are required" },
         { status: 400 }
       );
     }
-
-    const existingEmail = await User.findOne({ email });
-    if (existingEmail) {
-      return NextResponse.json({ error: "Email Already Exists" }, { status: 401 });
-    }
-
-    const existingPhone = await User.findOne({ phone });
-    if (existingPhone) {
-      return NextResponse.json({ error: "Phone number Already Exists" }, { status: 401 });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const createUser = await User.create({
       name,
       email,
       phone,
-      industry,
+      industry, // Store industry ID
       website,
       businessDescription,
       password: hashedPassword,

@@ -46,7 +46,8 @@ export async function POST(req: Request) {
       email: user.email,
       phone: user.phone,
       roles: user.roles,
-      isActive: user.isActive
+      isActive: user.isActive,
+      isAdmin: user.isAdmin,
     };
 
     return new Response(

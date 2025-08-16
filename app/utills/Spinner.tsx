@@ -1,5 +1,5 @@
 
-export const Spinner = () => {
+export const Spinner = ({}) => {
     return (
 
         <div className="d-flex justify-content-center align-items-center vh-100">

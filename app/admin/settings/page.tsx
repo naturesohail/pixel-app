@@ -12,7 +12,6 @@ export default function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Fetch current settings on component mount
   useEffect(() => {
     if (!user) return;
     
@@ -47,6 +46,7 @@ export default function SettingsPage() {
     setErrorMessage('');
     setIsSubmitting(true);
 
+    
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'POST',
@@ -70,16 +70,6 @@ export default function SettingsPage() {
     }
   };
 
-//   if (!user || !user.isAdmin) {
-//     return (
-//       <div className="ml-64 p-8">
-//         <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
-//           <h1 className="text-2xl font-bold text-red-600 mb-6">Unauthorized Access</h1>
-//           <p>You don't have permission to view this page.</p>
-//         </div>
-//       </div>
-//     );
-//   }
 
   return (
     <div className="ml-64 p-8"> {/* Adjusted for sidebar */}
@@ -118,7 +108,7 @@ export default function SettingsPage() {
                     value={stripePK}
                     onChange={(e) => setStripePK(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="pk_live_..."
+                    placeholder="pk_key_..."
                     disabled={isSubmitting}
                   />
                 </div>
@@ -128,11 +118,11 @@ export default function SettingsPage() {
                     Stripe Secret Key
                   </label>
                   <input
-                    type="password"
+                    type="text"
                     value={stripeSK}
                     onChange={(e) => setStripeSK(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="sk_live_..."
+                    placeholder="sk_key_..."
                     disabled={isSubmitting}
                   />
                 </div>

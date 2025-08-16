@@ -6,7 +6,7 @@ export default function Page() {
     const month = (today.getMonth() + 1).toString().padStart(2, "0");
     const year = today.getFullYear();
 
-    const formattedDate = `${day}-${month}-${year}`;
+    const formattedDate = `16-08-2025`;
 
     return (
         <div>
@@ -32,7 +32,7 @@ export default function Page() {
                                     </li>
 
                                     <li>
-                                                                                <a href="#">Last Updated: {formattedDate}</a>
+                             <a href="#">Last Updated: {formattedDate}</a>
 
                                     </li>
                                 </ul>

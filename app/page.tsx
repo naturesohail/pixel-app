@@ -41,6 +41,7 @@ interface PixelDataResponse {
 }
 
 export default function HomePage() {
+
   const [pixelData, setPixelData] = useState<{
     config: {
       totalPixels: number;
@@ -95,13 +96,15 @@ export default function HomePage() {
         console.error("Error fetching pixel data:", error);
         setIsLoading(false);
       }
-    }
+  }
+
     fetchPixelData();
   }, []);
 
   return (
     <FrontendLayout>
       <Header />
+
       <div className="main-banner" id="top" style={{paddingBottom: "0px", paddingLeft: "0px", paddingRight: "0px"}}>
         <div className="container-fluid">
           <div className="row">
@@ -126,6 +129,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+      
       <Footer />
     </FrontendLayout>
   );

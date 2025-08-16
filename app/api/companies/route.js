@@ -2,7 +2,8 @@ import User from "@/app/lib/models/userModel";
 import Product from "@/app/lib/models/productModel"; 
 import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/db";
-
+import industryModel from "@/app/lib/models/industryModel";
+import mongoose from "mongoose";
 export async function GET(req) {
   try {
     await connectDB();
@@ -35,6 +36,16 @@ export async function GET(req) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    for (let user of users) {
+      if (mongoose.Types.ObjectId.isValid(user.industry)) {
+        const industry = await industryModel.findById(user.industry).select('industry');
+        user.industry = industry ? industry.industry : "Unknown";
+      }
+      else {
+        user.industry = "Unknown";
+      }
+    }
 
     return NextResponse.json({
       users,

@@ -9,14 +9,12 @@ export async function GET() {
   try {
     await dbConnect();
     
-    // Verify admin
     const session = await getSession();
     if (!session || !session.user ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch data in parallel
-    const [totalTransactions, activeBids, totalUsers, revenueResult, transactions] = await Promise.all([
+    const [totalTransactions, activeBids, totalUsers, revenueResult, transactions, monthlyRevenue] = await Promise.all([
       Transaction.countDocuments({ status: 'completed' }),
       Bid.countDocuments({ status: 'active' }),
       User.countDocuments({ isAdmin: false }),
@@ -28,18 +26,34 @@ export async function GET() {
         .sort({ transactionDate: -1 })
         .limit(5)
         .populate('userId', 'name email')
-        .populate('productId', 'title')
+        .populate('productId', 'title'),
+      Transaction.aggregate([
+        { $match: { status: 'completed' } },
+        {
+          $group: {
+            _id: { $month: "$transactionDate" },
+            total: { $sum: "$amount" }
+          }
+        },
+        { $sort: { "_id": 1 } }
+      ])
     ]);
 
     const revenue = revenueResult[0]?.total || 0;
 
-    // Generate sample revenue data (in a real app, you'd generate this from actual data)
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const revenueByMonth = Array(12).fill(0);
+
+    monthlyRevenue.forEach(m => {
+      revenueByMonth[m._id - 1] = m.total; 
+    });
+
     const revenueData = {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+      labels: months,
       datasets: [
         {
           label: 'Revenue ($)',
-          data: [12500, 19000, 15000, 18000, 22000, 19500, 23000],
+          data: revenueByMonth,
           backgroundColor: 'rgba(79, 70, 229, 0.8)',
         },
       ],

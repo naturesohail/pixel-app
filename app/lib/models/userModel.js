@@ -24,8 +24,9 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     industry: {
-      type: String,
-      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Industry',
+      required: true
     },
     website: {
       type: String,

@@ -11,6 +11,7 @@ import Image from "next/image";
 import Swal from "sweetalert2";
 import { useParams } from 'next/navigation';
 
+
 interface Product {
   id?: string;
   title: string;
@@ -53,6 +54,9 @@ export default function BuyItNowPage() {
   const [showActionModal, setShowActionModal] = useState(false);
   const [bidData, setBidData] = useState<any>(null);
   const [activeAuctionZone, setActiveAuctionZone] = useState<any>(null);
+    const [stripeLoading, setStripeLoading] = useState(true);
+  const [stripe, setStripe] = useState<null| any>(null);
+
   const [productForm, setProductForm] = useState<Product>({
     title: "",
     description: "",
@@ -82,6 +86,8 @@ export default function BuyItNowPage() {
  
 useEffect(() => {
     if (userId === null && typeof window !== "undefined") return;
+
+   
 
     const fetchPixelGrid = async () => {
       try {
@@ -129,6 +135,30 @@ useEffect(() => {
 
   }, [userId]);
 
+     useEffect(() => {
+    const fetchStripeKey = async () => {
+      try {
+        setStripeLoading(true);
+        const response = await fetch('/api/admin/settings');
+        if (!response.ok) throw new Error('Failed to fetch Stripe key');
+        
+        const data = await response.json();
+        if (!data.stripePK) throw new Error('Stripe key not found');
+        
+        const stripeInstance = await loadStripe(data.stripePK);
+        setStripe(stripeInstance);
+      } catch (error) {
+        console.error("Stripe initialization error:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to initialize payment system"
+        );
+      } finally {
+        setStripeLoading(false);
+      }
+    };
+
+    fetchStripeKey();
+  }, []);
   const incrementCount = () => {
     if (pixelGrid && pixelCount < pixelGrid.config.availablePixels) {
       setPixelCount(pixelCount + 1);
