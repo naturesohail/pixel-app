@@ -3,7 +3,7 @@ import dbConnect from "@/app/lib/db";
 import PixelConfig from "@/app/lib/models/pixelModel";
 import { getSession } from "@/app/lib/auth";
 
-export async function DELETE(request: NextRequest, { params }: { params: { zoneId: string } }) {
+export async function DELETE(request: NextRequest, { params }: any ) {
   try {
     await dbConnect();
     const session = await getSession();
