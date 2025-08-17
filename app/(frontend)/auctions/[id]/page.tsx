@@ -13,6 +13,7 @@ import Image from "next/image";
 export default function PixelMarketplace() {
   const params = useParams();
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeAuctionZone, setActiveAuctionZone] = useState<any>({});
   const [config, setConfig] = useState<any>(null);
@@ -28,6 +29,7 @@ export default function PixelMarketplace() {
     url: ""
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const zoneId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [auctionEnded, setAuctionEnded] = useState(false);
@@ -57,6 +59,7 @@ export default function PixelMarketplace() {
         }
 
         setUserId(parsed._id);
+        setIsAdmin(parsed.isAdmin || false);
         await fetchPixelData();
       } catch (err) {
         console.error("Authentication error:", err);
@@ -146,6 +149,50 @@ export default function PixelMarketplace() {
     }
   }
 
+  const handleDeleteAuction = async () => {
+    if (!isAdmin) {
+      Swal.fire({
+        title: "Permission Denied",
+        text: "Only administrators can delete auction zones",
+        icon: "error",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/pixels/auction-zone/${zoneId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        Swal.fire({
+          title: "Auction Deleted",
+          text: "The auction zone has been successfully deleted",
+          icon: "success",
+        }).then(() => {
+          router.push("/auctions");
+        });
+      } else {
+        throw new Error(data.message || "Failed to delete auction zone");
+      }
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      Swal.fire({
+        title: "Deletion Failed",
+        text: error.message || "Something went wrong while deleting the auction",
+        icon: "error",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleNewBid = (newBid: any) => {
     setBids([newBid, ...bids]);
     setHighestBid(newBid.bidAmount);
@@ -220,16 +267,12 @@ export default function PixelMarketplace() {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || "Payment failed");
       }
 
-      if (data.url) {
-        window.location.href = data.url; 
-      } else {
-        throw new Error("Missing checkout session URL");
-      }
+      router.push("/");
     } catch (error: any) {
       console.error("Payment error:", error);
       Swal.fire({
@@ -253,6 +296,35 @@ export default function PixelMarketplace() {
     );
   };
 
+  const renderAdminDeleteButton = () => {
+    if (!auctionEnded || !isAdmin ) return null;
+
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+          
+          <button
+            onClick={handleDeleteAuction}
+            disabled={isDeleting}
+            className={`flex items-center justify-center px-4 py-2 rounded-md text-white ${isDeleting ? "bg-red-400" : "bg-red-600 hover:bg-red-700"
+              }`}
+          >
+            {isDeleting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Deleting...
+              </>
+            ) : (
+              "Delete Auction Zone"
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <FrontendLayout>
@@ -337,16 +409,19 @@ export default function PixelMarketplace() {
                     </div>
                   </div>
                 )}
+
+                {renderAdminDeleteButton()}
               </div>
 
-              {/* {!auctionEnded && activeAuctionZone?._id && ( */}
+
+              {!auctionEnded && activeAuctionZone?._id && (
                 <BidForm
                   config={config}
                   activeAuctionZone={activeAuctionZone}
                   highestBid={highestBid}
                   onNewBid={handleNewBid}
                 />
-              {/* )} */}
+              )}
             </div>
 
             <div className="lg:col-span-3">
@@ -437,14 +512,13 @@ export default function PixelMarketplace() {
           </div>
         )}
 
-        {/* Payment Modal */}
         {showPaymentModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold">Complete Your Payment</h2>
-                  <button 
+                  <button
                     onClick={() => setShowPaymentModal(false)}
                     className="text-gray-500 hover:text-gray-700"
                   >
@@ -477,7 +551,7 @@ export default function PixelMarketplace() {
                     type="text"
                     className="w-full p-2 border border-gray-300 rounded-md"
                     value={productForm.title}
-                    onChange={(e) => setProductForm({...productForm, title: e.target.value})}
+                    onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
                     placeholder="Enter title for your pixel content"
                     required
                   />
@@ -518,17 +592,16 @@ export default function PixelMarketplace() {
                     type="url"
                     className="w-full p-2 border border-gray-300 rounded-md"
                     value={productForm.url}
-                    onChange={(e) => setProductForm({...productForm, url: e.target.value})}
+                    onChange={(e) => setProductForm({ ...productForm, url: e.target.value })}
                     placeholder="https://example.com"
                   />
                 </div>
 
                 <button
-                  className={`w-full py-3 px-4 rounded-md text-white font-medium ${
-                    isProcessing || !productForm.title 
-                      ? "bg-gray-400 cursor-not-allowed" 
+                  className={`w-full py-3 px-4 rounded-md text-white font-medium ${isProcessing || !productForm.title
+                      ? "bg-gray-400 cursor-not-allowed"
                       : "bg-green-600 hover:bg-green-700"
-                  }`}
+                    }`}
                   onClick={handlePayment}
                   disabled={isProcessing || !productForm.title}
                 >

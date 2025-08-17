@@ -38,7 +38,6 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ buttonContent, children }) 
           <div className="py-1">
             {children}
             
-            {/* Logout button */}
             <button
               onClick={logout}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

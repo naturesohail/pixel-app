@@ -1,4 +1,3 @@
-// app/api/admin/dashboard/route.ts
 import { NextResponse } from "next/server";
 import dbConnect from "@/app/lib/db";
 import User from "@/app/lib/models/userModel";
@@ -18,6 +17,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter") || "year"; // default yearly
+    const specificYear = searchParams.get("year");
 
     // Common stats
     const [totalTransactions, activeBids, totalUsers, revenueResult, transactions] = await Promise.all([
@@ -40,9 +40,26 @@ export async function GET(req: Request) {
     let revenueData;
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-    if (filter === "year" || filter === "prevYear") {
-      const currentYear = new Date().getFullYear();
-      const year = filter === "prevYear" ? currentYear - 1 : currentYear;
+    // NEW: Get available years for dropdown
+    const yearsResult = await Transaction.aggregate([
+      {
+        $group: {
+          _id: { $year: "$transactionDate" }
+        }
+      },
+      { $sort: { _id: -1 } }
+    ]);
+    const availableYears = yearsResult.map(y => y._id).filter(y => y !== null);
+
+    if (filter === "year" || filter === "prevYear" || filter === "specificYear") {
+      let year;
+      
+      if (filter === "specificYear" && specificYear) {
+        year = parseInt(specificYear, 10);
+      } else {
+        const currentYear = new Date().getFullYear();
+        year = filter === "prevYear" ? currentYear - 1 : currentYear;
+      }
 
       const monthlyRevenue = await Transaction.aggregate([
         {
@@ -76,7 +93,11 @@ export async function GET(req: Request) {
           {
             label: `Revenue ${year} ($)`,
             data: revenueByMonth,
-            backgroundColor: filter === "prevYear" ? "rgba(239, 68, 68, 0.8)" : "rgba(79, 70, 229, 0.8)", // red for prev year
+            backgroundColor: filter === "prevYear" ? 
+              "rgba(239, 68, 68, 0.8)" : 
+              filter === "specificYear" ?
+                "rgba(234, 179, 8, 0.8)" :
+                "rgba(79, 70, 229, 0.8)",
           },
         ],
       };
@@ -119,8 +140,39 @@ export async function GET(req: Request) {
           },
         ],
       };
+    } else if (filter === "allTime") {
+      // All-time revenue data
+      const yearlyRevenue = await Transaction.aggregate([
+        {
+          $match: {
+            status: "completed"
+          }
+        },
+        {
+          $group: {
+            _id: { $year: "$transactionDate" },
+            total: { $sum: "$amount" }
+          }
+        },
+        { $sort: { "_id": 1 } }
+      ]);
+
+      const labels = yearlyRevenue.map(y => y._id.toString());
+      const data = yearlyRevenue.map(y => y.total);
+
+      revenueData = {
+        labels,
+        datasets: [
+          {
+            label: "All-Time Revenue ($)",
+            data,
+            backgroundColor: "rgba(234, 179, 8, 0.8)",
+          },
+        ],
+      };
     }
 
+    
     return NextResponse.json({
       totalTransactions,
       activeBids,
@@ -135,6 +187,9 @@ export async function GET(req: Request) {
         date: new Date(t.transactionDate).toLocaleDateString(),
         status: t.status,
       })),
+      availableYears, 
+      currentFilter: filter,
+      specificYear: filter === "specificYear" ? specificYear : null,
     });
   } catch (error) {
     console.error("Dashboard error:", error);

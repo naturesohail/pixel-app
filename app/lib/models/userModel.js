@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     industry: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Industry',
-      required: true
+      
     },
     website: {
       type: String,

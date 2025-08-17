@@ -1,7 +1,15 @@
 'use client';
 import AdminLayout from '@/app/layouts/AdminLayout';
-import { ShoppingCartIcon, TagIcon, UsersIcon, CurrencyDollarIcon, ChartBarIcon } from '@heroicons/react/24/outline';
-import { useEffect, useState } from 'react';
+import { 
+  ShoppingCartIcon, 
+  TagIcon, 
+  UsersIcon, 
+  CurrencyDollarIcon, 
+  ChartBarIcon,
+  CalendarIcon,
+  ChevronDownIcon
+} from '@heroicons/react/24/outline';
+import { useEffect, useState, useRef } from 'react';
 import { Spinner } from '@/app/utills/Spinner';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -13,6 +21,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+
 
 ChartJS.register(
   CategoryScale,
@@ -44,35 +53,90 @@ type DashboardData = {
     date: string;
     status: string;
   }[];
+  availableYears?: number[];
+  currentFilter?: string;
+  specificYear?: string | null;
 };
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>('year');
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  const fetchData = async (filterParam: string, year?: number) => {
+    try {
+      setFilterLoading(true);
+      
+      // Build URL with parameters
+      let url = `/api/admin/dashboard?filter=${filterParam}`;
+      if (year) {
+        url += `&year=${year}`;
+        setSelectedYear(year);
+      }
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setData(result);
+      setFilter(filterParam);
+    } catch (err) {
+      console.error("Failed to load data:", err);
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+      setFilterLoading(false);
+      setDropdownOpen(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/admin/dashboard');
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        setData(result);
-      } catch (err) {
-        console.error("Failed to load data:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        setLoading(false);
+    fetchData(filter);
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
       }
     };
 
-    fetchData();
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
+
+  const handleFilterChange = (newFilter: string) => {
+    if (newFilter !== filter) {
+      setSelectedYear(null);
+      fetchData(newFilter);
+    }
+  };
+
+  const handleYearChange = (year: number) => {
+    fetchData('specificYear', year);
+  };
+
+  const getFilterTitle = () => {
+    if (filter === 'specificYear' && selectedYear) {
+      return selectedYear.toString();
+    }
+    
+    switch(filter) {
+      case 'today': return 'Today';
+      case 'year': return 'This Year';
+      case 'prevYear': return 'Last Year';
+      case 'allTime': return 'All Time';
+      default: return 'This Year';
+    }
+  };
 
   if (loading) {
     return (
@@ -143,28 +207,120 @@ export default function Dashboard() {
 
       {data?.revenueData && (
         <div className="bg-white p-6 rounded shadow mb-8">
-          <div className="flex items-center mb-4">
-            <ChartBarIcon className="h-6 w-6 text-indigo-500 mr-2" />
-            <h2 className="text-xl font-bold">Revenue Overview ({new Date().getFullYear()})</h2>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
+            <div className="flex items-center mb-4 sm:mb-0">
+              <ChartBarIcon className="h-6 w-6 text-indigo-500 mr-2" />
+              <h2 className="text-xl font-bold">Revenue Overview</h2>
+            </div>
+            
+            <div className="relative" ref={dropdownRef}>
+              <div className="flex items-center">
+                <CalendarIcon className="h-5 w-5 text-gray-500 mr-2" />
+                <span className="mr-2 text-gray-700">Filter:</span>
+                <div className="relative inline-block text-left">
+                  <button 
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+                  >
+                    {getFilterTitle()}
+                    <ChevronDownIcon className="-mr-1 ml-2 h-5 w-5" aria-hidden="true" />
+                  </button>
+                  
+                  {dropdownOpen && (
+                    <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                      <div className="py-1">
+                        <button 
+                          onClick={() => handleFilterChange('today')}
+                          className={`block w-full text-left px-4 py-2 text-sm ${
+                            filter === 'today' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          Today
+                        </button>
+                        <button 
+                          onClick={() => handleFilterChange('year')}
+                          className={`block w-full text-left px-4 py-2 text-sm ${
+                            filter === 'year' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          This Year
+                        </button>
+                        <button 
+                          onClick={() => handleFilterChange('prevYear')}
+                          className={`block w-full text-left px-4 py-2 text-sm ${
+                            filter === 'prevYear' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          Last Year
+                        </button>
+                        <button 
+                          onClick={() => handleFilterChange('allTime')}
+                          className={`block w-full text-left px-4 py-2 text-sm ${
+                            filter === 'allTime' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          All Time
+                        </button>
+                        
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <div className="px-4 py-2 text-xs text-gray-500 font-medium">
+                          Select Specific Year
+                        </div>
+                        {data?.availableYears?.map(year => (
+                          <button 
+                            key={year}
+                            onClick={() => handleYearChange(year)}
+                            className={`block w-full text-left px-4 py-2 text-sm ${
+                              filter === 'specificYear' && selectedYear === year
+                                ? 'bg-blue-100 text-blue-800' 
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {year}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="h-80">
-            <Bar
-              data={data.revenueData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'top' as const,
+          
+          {filterLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Spinner />
+            </div>
+          ) : (
+            <div className="h-80">
+              <Bar
+                data={data.revenueData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'top' as const,
+                    },
+                    title: {
+                      display: true,
+                      text: filter === 'specificYear' && selectedYear 
+                        ? `Revenue for ${selectedYear}`
+                        : `Revenue Data (${getFilterTitle()})`,
+                    },
                   },
-                  title: {
-                    display: true,
-                    text: 'Monthly Revenue',
-                  },
-                },
-              }}
-            />
-          </div>
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 

@@ -205,16 +205,7 @@ export default function Industries() {
                       >
                         <PencilIcon className="w-5 h-5" />
                       </button>
-                      <button 
-                        onClick={() => { 
-                          setIndustryToDelete(industry); 
-                          setShowDeleteModal(true); 
-                        }} 
-                        className="text-red-600 hover:text-red-900"
-                        aria-label={`Delete ${industry.industry}`}
-                      >
-                        <TrashIcon className="w-5 h-5" />
-                      </button>
+                     
                     </td>
                   </tr>
                 ))

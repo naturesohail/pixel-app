@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { Spinner } from '@/app/utills/Spinner';
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const [stripePK, setStripePK] = useState('');
   const [stripeSK, setStripeSK] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -14,19 +16,20 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchSettings = async () => {
       try {
         setIsLoading(true);
         const response = await fetch('/api/admin/settings');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch settings');
         }
-        
+
         const data = await response.json();
         setStripePK(data.stripePK || '');
         setStripeSK(data.stripeSK || '');
+        setAdminEmail(user?.email || ''); 
       } catch (error) {
         console.error('Error fetching settings:', error);
         setErrorMessage('Failed to load settings. Please try again.');
@@ -38,15 +41,13 @@ export default function SettingsPage() {
     fetchSettings();
   }, [user]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleStripeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-   
 
     setSuccessMessage('');
     setErrorMessage('');
     setIsSubmitting(true);
 
-    
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'POST',
@@ -55,12 +56,12 @@ export default function SettingsPage() {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to save settings');
       }
-      
-      setSuccessMessage('Settings saved successfully!');
+
+      setSuccessMessage('Stripe settings saved successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -71,16 +72,52 @@ export default function SettingsPage() {
   };
 
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setSuccessMessage('');
+    setErrorMessage('');
+    setIsSubmitting(true);
+    if (!user?._id) {
+      setErrorMessage('User ID is required to update email.');
+      setIsSubmitting(false);
+      return;
+    }
+    try {
+      const response = await fetch('/api/admin/update-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail, userId: user?._id })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update email');
+      }
+
+      setSuccessMessage('Email updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Error updating email:', error);
+      setErrorMessage(error.message || 'Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="ml-64 p-8"> {/* Adjusted for sidebar */}
-      <div className="max-w-4xl mx-auto"> {/* 8-column width */}
+    <div className="ml-64 p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        
+        {/* --- Stripe Settings Section --- */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Admin Settings</h1>
-          
+
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="flex flex-col items-center">
-                <Spinner/>
+                <Spinner />
                 <p className="mt-4 text-gray-600">Loading settings...</p>
               </div>
             </div>
@@ -91,14 +128,13 @@ export default function SettingsPage() {
                   {successMessage}
                 </div>
               )}
-              
               {errorMessage && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
                   {errorMessage}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleStripeSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Stripe Publishable Key
@@ -112,7 +148,7 @@ export default function SettingsPage() {
                     disabled={isSubmitting}
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Stripe Secret Key
@@ -126,7 +162,7 @@ export default function SettingsPage() {
                     disabled={isSubmitting}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-end">
                   <button
                     type="submit"
@@ -139,13 +175,51 @@ export default function SettingsPage() {
                         Saving...
                       </>
                     ) : (
-                      'Save Settings'
+                      'Save Stripe Settings'
                     )}
                   </button>
                 </div>
               </form>
             </>
           )}
+        </div>
+
+        {/* --- Email Settings Section --- */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-6">Change Admin Email</h2>
+
+          <form onSubmit={handleEmailSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Admin Email
+              </label>
+              <input
+                type="email"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                placeholder="admin@example.com"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 flex items-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Spinner />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Email'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
