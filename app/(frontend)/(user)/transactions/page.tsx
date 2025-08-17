@@ -96,25 +96,25 @@ export default function TransactionsView() {
                 {filteredTransactions.map((transaction, index) => (
                   <tr key={transaction._id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 border-b">{index + 1}</td>
-                    <td className="px-4 py-2 border-b">{transaction.productId.title}</td>
-                    <td className="px-4 py-2 border-b">${transaction.amount.toLocaleString()}</td>
-                    <td className="px-4 py-2 border-b">{transaction.pixelCount.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">{transaction?.productId?.title}</td>
+                    <td className="px-4 py-2 border-b">${transaction?.amount.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">{transaction?.pixelCount.toLocaleString()}</td>
                     <td className="px-4 py-2 border-b">
-                      {new Date(transaction.transactionDate).toLocaleString()}
+                      {new Date(transaction?.transactionDate).toLocaleString()}
                     </td>
                     <td className="px-4 py-2 border-b">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        transaction.status === 'completed' 
+                        transaction?.status === 'completed' 
                           ? 'bg-green-100 text-green-800' 
-                          : transaction.status === 'pending' 
+                          : transaction?.status === 'pending' 
                             ? 'bg-yellow-100 text-yellow-800' 
                             : 'bg-red-100 text-red-800'
                       }`}>
-                        {transaction.status}
+                        {transaction?.status}
                       </span>
                     </td>
                     <td className="px-4 py-2 border-b capitalize">
-                      {transaction.paymentMethod}
+                      {transaction?.paymentMethod}
                     </td>
                   </tr>
                 ))}
