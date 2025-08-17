@@ -339,14 +339,14 @@ export default function PixelMarketplace() {
                 )}
               </div>
 
-              {!auctionEnded && activeAuctionZone?._id && (
+              {/* {!auctionEnded && activeAuctionZone?._id && ( */}
                 <BidForm
                   config={config}
                   activeAuctionZone={activeAuctionZone}
                   highestBid={highestBid}
                   onNewBid={handleNewBid}
                 />
-              )}
+              {/* )} */}
             </div>
 
             <div className="lg:col-span-3">
