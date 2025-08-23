@@ -112,7 +112,7 @@ export default function TransactionsView() {
                       }`}>
                         {transaction?.status}
                       </span>
-                    </td>
+                    </td>wwwwwwww
                     <td className="px-4 py-2 border-b capitalize">
                       {transaction?.paymentMethod}
                     </td>

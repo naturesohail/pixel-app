@@ -62,7 +62,7 @@ export default function Pixels() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Price/Pixel', 'One-Time Price', 'Total Pixels', 'Actions'].map(header => (
+                {['Price/Pixel', 'One-Time Price',  'Actions'].map(header => (
                   <th
                     key={header}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
@@ -90,7 +90,7 @@ export default function Pixels() {
                   <tr key={config._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">${config.pricePerPixel}</td>
                     <td className="px-6 py-4">${config.oneTimePrice?.toFixed(2)}</td>
-                    <td className="px-6 py-4">{config.totalPixels?.toLocaleString()}</td>
+                    {/* <td className="px-6 py-4">{config.totalPixels?.toLocaleString()}</td> */}
                     <td className="px-6 py-4">
                       <button
                         onClick={() => router.push(`/admin/pixels/edit?id=${config._id}`)}

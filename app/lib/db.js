@@ -8,7 +8,7 @@ const dbConnection = {
 
 async function connectDB() {
   if (dbConnection.isConnected) {
-    console.log("MongoDB is already connected");
+    // console.log("MongoDB is already connected");
     return mongoose.connection; // Return existing connection
   }
 

@@ -182,9 +182,10 @@ export default function Header() {
                     )}
                   </li>
                 ) : (
-                  <li className="mt-4">
+                  <li className="mt-1">
                     <Link href="/login" title="Login" className="hover:text-blue-600 text-gray-800">
-                      <FaSignInAlt size={20} />
+{/* /                                              <FaSignInAlt size={20} /> */}
+                      Login
                     </Link>
                   </li>
                 )}
