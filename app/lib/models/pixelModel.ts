@@ -68,6 +68,11 @@ const AuctionZoneSchema = new Schema(
     buyNowPrice: { type: Number },
     totalPixels: { type: Number, required: true },
     pixelPrice: { type: Number, default: 0.01 },
+        notificationsProcessed: {
+      type: Boolean,
+      default: false
+    }
+
   },
   { _id: true, timestamps: true }
 );

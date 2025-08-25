@@ -45,6 +45,8 @@ export async function GET() {
     );
   }
 }
+
+
 export async function POST(request: Request) {
   await dbConnect();
 
@@ -73,14 +75,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // Calculate total pixels
     const totalPixels = width * height;
 
-    // Calculate expiry date
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + auctionDuration);
 
-    // Check for overlapping zones
     const isOverlapping = config.auctionZones.some(
       (zone: any) =>
         x < zone.x + zone.width &&
@@ -96,7 +95,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate products if zone is not empty
     if (!isEmpty && productIds.length > 0) {
       const products = await Product.find({ _id: { $in: productIds } });
       if (products.length !== productIds.length) {

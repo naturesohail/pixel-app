@@ -54,3 +54,6 @@ export const bidNotificationTemplate = (zoneId: string, bidAmount: number) => `
     </p>
   </div>
 `;
+
+
+
