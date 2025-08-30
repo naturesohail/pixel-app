@@ -27,12 +27,12 @@ export const winnerNotificationTemplate = (auctionZone: any, bidAmount: number, 
         </div>
         <div class="content">
           <p>Hello Bidder,</p>
-          <p>We're excited to inform you that the auction for <strong>${auctionZone.name}</strong> has ended.</p>
+          <p>We're excited to inform you that the auction for <strong>${auctionZone._id}</strong> has ended.</p>
           <p>Your bid of <strong>$${bidAmount}</strong> placed you in <strong>${position}${getNumberSuffix(position)}</strong> place!</p>
           ${position === 1 ? 
             `<p>As the winner, you can now complete your payment to secure the pixels.</p>
             <p style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL}/auctions/${auctionZone._id}" class="button">Complete Payment</a>
+              <a href="${process.env.NEXT_PUBLIC_SITE_URL}/auctions/${auctionZone._id}" class="button">Complete Payment</a>
             </p>` : 
             `<p>While you didn't win this auction, your strong bid demonstrates your interest in our pixel marketplace.</p>
             <p>Keep an eye out for future auctions that might interest you!</p>`
