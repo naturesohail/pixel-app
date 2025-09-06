@@ -56,31 +56,20 @@ export async function POST(request: Request) {
   await dbConnect();
 
   try {
-    // Extract JWT token from authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: "Authorization header missing or invalid" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    
-    // Verify JWT token to get user information
-    let userId;
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-      userId = (decoded as any).id;
-    } catch (jwtError) {
-      return NextResponse.json(
-        { error: "Invalid authentication token" },
-        { status: 401 }
-      );
-    }
+    const token = request.headers.get("cookie")?.split("authToken=")[1]?.split(";")[0];
+   
+       if (!token) {
+         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+       }
+   
+       const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+   
+       if (!decoded) {
+         return NextResponse.json({ error: "Invalid Token" }, { status: 401 });
+       }
 
     // Fetch user details from database
-    const user = await User.findById(userId);
+    const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
