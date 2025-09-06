@@ -18,6 +18,7 @@ interface EmailOptions {
   subject: string;
   text: string;
   html?: string;
+  cc?: string;
 }
 
 export const sendEmail = async (options: EmailOptions) => {
@@ -37,6 +38,50 @@ export const sendEmail = async (options: EmailOptions) => {
     throw error;
   }
 };
+
+
+export const sendAuctionEmail = async (options: EmailOptions) => {
+  try {
+    const mailOptions = {
+      from: `Auction Notification <${process.env.MAIL_FROM}>`,
+      to: options.to,
+      cc: options.cc, 
+      subject: options.subject,
+      text: options.text,
+      html: options.html || options.text,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${options.to}: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`Failed to send email to ${options.to}:`, error);
+    throw error;
+  }
+};
+
+export const auctionZoneTemplate = (zone: any) => `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <h2 style="color: #333;">New Auction Zone Created!</h2>
+    <p>A new auction zone has been created with the following details:</p>
+    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px;">
+      <p><strong>Zone ID:</strong> ${zone._id}</p>
+      <p><strong>Coordinates:</strong> (${zone.x}, ${zone.y})</p>
+      <p><strong>Dimensions:</strong> ${zone.width}x${zone.height}</p>
+      <p><strong>Total Pixels:</strong> ${zone.totalPixels}</p>
+      <p><strong>Buy Now Price:</strong> $${zone.buyNowPrice}</p>
+      <p><strong>Expiry Date:</strong> ${new Date(zone.expiryDate).toLocaleDateString()}</p>
+      <p><strong>Status:</strong> ${zone.status}</p>
+    </div>
+    <div style="margin-top: 30px; text-align: center;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL}" 
+         style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 4px;">
+        View All Auction Zones
+      </a>
+    </div>
+  </div>
+`;
+
 
 export const bidNotificationTemplate = (zoneId: string, bidAmount: number) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
