@@ -6,6 +6,7 @@ import { winnerNotificationTemplate, participantNotificationTemplate } from '../
 import { sendEmail } from '../lib/email';
 
 class AuctionNotificationService {
+
   async processEndedAuctions() {
     const now = new Date();
     const pixelConfig = await PixelConfig.findOne();
@@ -17,7 +18,7 @@ class AuctionNotificationService {
 
     for (const auction of endedAuctions) {
       try {
-        const bids = await Bid.find({ zoneId: auction._id })
+        const bids = await Bid.find({ zoneId: auction.auctionZoneId })
           .sort({ bidAmount: -1, createdAt: 1 })
           .populate('userId', 'email');
 
@@ -28,7 +29,7 @@ class AuctionNotificationService {
         if (bids[0]) {
           notificationPromises.push(
             AuctionNotification.create({
-              auctionZoneId: auction._id,
+              auctionZoneId: auction.auctionZoneId,
               bidId: bids[0]._id,
               userId: bids[0].userId._id,
               rank: 1,
@@ -44,7 +45,7 @@ class AuctionNotificationService {
           secondPlaceDate.setDate(secondPlaceDate.getDate() + 1);
           notificationPromises.push(
             AuctionNotification.create({
-              auctionZoneId: auction._id,
+              auctionZoneId: auction.auctionZoneId,
               bidId: bids[1]._id,
               userId: bids[1].userId._id,
               rank: 2,
@@ -60,7 +61,7 @@ class AuctionNotificationService {
           thirdPlaceDate.setDate(thirdPlaceDate.getDate() + 2);
           notificationPromises.push(
             AuctionNotification.create({
-              auctionZoneId: auction._id,
+              auctionZoneId: auction.auctionZoneId,
               bidId: bids[2]._id,
               userId: bids[2].userId._id,
               rank: 3,
@@ -78,7 +79,7 @@ class AuctionNotificationService {
           for (let i = 3; i < bids.length; i++) {
             notificationPromises.push(
               AuctionNotification.create({
-                auctionZoneId: auction._id,
+                auctionZoneId: auction.auctionZoneId,
                 bidId: bids[i]._id,
                 userId: bids[i].userId._id,
                 rank: i + 1,
@@ -101,6 +102,7 @@ class AuctionNotificationService {
       } catch (error) {
         console.error(`Error processing auction ${auction._id}:`, error);
       }
+
     }
   }
 
@@ -125,8 +127,9 @@ class AuctionNotificationService {
         let emailSubject, emailHtml;
 
         if (notification.notificationType === 'winner') {
-          emailSubject = `Congratulations! You won the auction for ${auction.name}`;
+          emailSubject = `Congratulations! You won the auction for ${notification.auctionZoneId}`;
           emailHtml = winnerNotificationTemplate(
+            user,
             auction,
             notification.bidId.bidAmount,
             notification.rank
@@ -134,22 +137,23 @@ class AuctionNotificationService {
         } else if (notification.notificationType === 'runner_up') {
           emailSubject = `You placed ${notification.rank}${this.getNumberSuffix(
             notification.rank
-          )} in ${auction.name} auction`;
+          )} in ${notification.auctionZoneId} auction`;
           emailHtml = winnerNotificationTemplate(
+            user,
             auction,
             notification.bidId.bidAmount,
             notification.rank
           );
         } else {
-          emailSubject = `Auction results for ${auction.name}`;
-          emailHtml = participantNotificationTemplate(auction);
+          emailSubject = `Auction results for ${notification.auctionZoneId}`;
+          emailHtml = participantNotificationTemplate(user,auction);
         }
 
         await sendEmail({
           to: user.email,
           subject: emailSubject,
           html: emailHtml,
-          text: `Auction results for ${auction.name}. Please view the HTML version for details.`,
+          text: `Auction results for ${notification.auctionZoneId}. Please view the HTML version for details.`,
         });
 
         notification.sent = true;
@@ -169,6 +173,7 @@ class AuctionNotificationService {
     if (number === 3) return 'rd';
     return 'th';
   }
+
 }
 
 export default AuctionNotificationService;

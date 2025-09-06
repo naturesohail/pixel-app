@@ -5,7 +5,6 @@ import { Spinner } from '@/app/utills/Spinner';
 import Header from '@/app/components/Header';
 import { useAuth } from '@/app/context/AuthContext';
 
-// Define Transaction type
 type Transaction = {
   _id: string;
   productId: {
@@ -112,7 +111,7 @@ export default function TransactionsView() {
                       }`}>
                         {transaction?.status}
                       </span>
-                    </td>wwwwwwww
+                    </td>
                     <td className="px-4 py-2 border-b capitalize">
                       {transaction?.paymentMethod}
                     </td>

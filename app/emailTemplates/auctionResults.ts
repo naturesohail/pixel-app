@@ -1,5 +1,4 @@
-// lib/emailTemplates/auctionResults.ts
-export const winnerNotificationTemplate = (auctionZone: any, bidAmount: number, position: number) => {
+export const winnerNotificationTemplate = (user:any, auctionZone: any, bidAmount: number, position: number) => {
   const getNumberSuffix = (number: number) => {
     if (number === 1) return 'st';
     if (number === 2) return 'nd';
@@ -26,7 +25,7 @@ export const winnerNotificationTemplate = (auctionZone: any, bidAmount: number, 
           <h1>Congratulations! You're ${position === 1 ? 'the Winner' : 'a Top Bidder'}</h1>
         </div>
         <div class="content">
-          <p>Hello Bidder,</p>
+          <p>Hello ${user.name},</p>
           <p>We're excited to inform you that the auction for <strong>${auctionZone._id}</strong> has ended.</p>
           <p>Your bid of <strong>$${bidAmount}</strong> placed you in <strong>${position}${getNumberSuffix(position)}</strong> place!</p>
           ${position === 1 ? 
@@ -48,7 +47,7 @@ export const winnerNotificationTemplate = (auctionZone: any, bidAmount: number, 
   `;
 };
 
-export const participantNotificationTemplate = (auctionZone: any) => {
+export const participantNotificationTemplate = (user:any,auctionZone: any) => {
   return `
     <!DOCTYPE html>
     <html>
@@ -67,10 +66,9 @@ export const participantNotificationTemplate = (auctionZone: any) => {
           <h1>Auction Results</h1>
         </div>
         <div class="content">
-          <p>Hello Bidder,</p>
+          <p>Hello ${user.name},</p>
           <p>The auction for <strong>${auctionZone.name}</strong> has now concluded.</p>
           <p>Thank you for your participation in this auction. While your bid wasn't among the top placements this time, we appreciate your interest in our pixel marketplace.</p>
-          <p>We regularly host new auctions, so be sure to check back for future opportunities!</p>
         </div>
         <div class="footer">
           <p>Thank you for participating in our Pixel Marketplace.</p>

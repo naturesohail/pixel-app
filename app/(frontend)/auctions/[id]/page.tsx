@@ -176,7 +176,7 @@ export default function PixelMarketplace() {
           text: "The auction zone has been successfully deleted",
           icon: "success",
         }).then(() => {
-          router.push("/auctions");
+          router.push("/");
         });
       } else {
         throw new Error(data.message || "Failed to delete auction zone");

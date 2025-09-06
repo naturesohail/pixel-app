@@ -28,10 +28,10 @@ const appendBidsInAuction = async (config: any) => {
 
   const enrichedBids = bids.map((bid) => {
     const createdAtTime = new Date(activeZone.createdAt).getTime();
-    console.log("bal ",createdAtTime)
+    // console.log(" ",createdAtTime)
     const resultTime = createdAtTime + auctionWinMs;
 
-    const expired = Date.now() > resultTime;
+    const expired = Date.now() > resultTime;  
     const isHighest = bid.bidAmount === highestBidAmount;
 
     return {

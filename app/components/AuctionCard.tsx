@@ -39,8 +39,8 @@ export default function AuctionCard({ config, products }: any) {
   const [showLoginAlert, setShowLoginAlert] = useState(false);
 
   const productMap = useRef<Record<number, Product>>({});
-  const dragJustEnded = useRef(false); // Track if drag just ended
-
+  const dragJustEnded = useRef(false);
+  
   const isAreaOverlapping = useCallback(
     (x: number, y: number, width: number, height: number): boolean => {
       for (const zone of auctionZones) {
