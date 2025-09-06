@@ -6,7 +6,7 @@ export default function Page() {
     const month = (today.getMonth() + 1).toString().padStart(2, "0");
     const year = today.getFullYear();
 
-    const formattedDate = `26-08-2025`;
+    const formattedDate = `06-09-2025`;
 
     return (
         <div>
