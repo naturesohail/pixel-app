@@ -23,19 +23,23 @@ export default function Page() {
 
                         <div className="col-lg-6">
                             <div className="first-item">
+
                                 <div className="logo">
                                     <span style={{ color: "white" }}>AIOFTHEWORLD</span>
                                 </div>
+
                                 <ul>
+
                                     <li>
                                         <a href="#">Developed by Data App LLC admin@aioftheworld.com</a>
                                     </li>
 
                                     <li>
-                             <a href="#">Last Updated: {formattedDate}</a>
-
+                                       <a href="#">Last Updated: {formattedDate}</a>
                                     </li>
+
                                 </ul>
+                                
                             </div>
                         </div>
 

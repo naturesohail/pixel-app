@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import PixelConfig from "@/app/lib/models/pixelModel";
 import Product from "@/app/lib/models/productModel";
 import dbConnect from "@/app/lib/db";
-
+import jwt from "jsonwebtoken";
 import nodemailer from 'nodemailer';
+import User from "@/app/lib/models/userModel";
 
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
@@ -111,11 +112,42 @@ export async function GET() {
   }
 }
 
-
 export async function POST(request: Request) {
   await dbConnect();
 
   try {
+    // Extract JWT token from authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: "Authorization header missing or invalid" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify JWT token to get user information
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+      userId = (decoded as any).id;
+    } catch (jwtError) {
+      return NextResponse.json(
+        { error: "Invalid authentication token" },
+        { status: 401 }
+      );
+    }
+
+    // Fetch user details from database
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     const {
       x,
       y,
@@ -200,8 +232,8 @@ export async function POST(request: Request) {
     
     try {
       await sendEmail({
-        to: process.env.ADMIN_NOTIFICATION_EMAIL || 'aiadmin@datanapp.com',
-        cc: process.env.MAIL_USER, 
+        to: user.email, 
+        cc: process.env.ADMIN_NOTIFICATION_EMAIL,
         subject: `New Auction Zone Created - ${width}x${height} at (${x},${y})`,
         text: `A new auction zone has been created with ID: ${savedZone._id}`,
         html: auctionZoneTemplate(savedZone)
