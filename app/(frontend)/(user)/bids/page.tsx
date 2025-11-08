@@ -27,7 +27,7 @@ export default function ProductBidsView() {
 
           bidId: bid?._id,
           userId: user?._id,
-          pixelCount: bid.pixelCount || 0, // Make sure to include pixelCount
+          pixelCount: bid.pixelCount || 0, 
           totalPrice: bid.bidAmount,
           productData: {
             title: bid?.title || "Bid Payment",
@@ -36,7 +36,7 @@ export default function ProductBidsView() {
             category: bid?.category || "other",
             url: bid?.url || ""
           },
-          isOneTimePurchase: false // Since this is for bid payment
+          isOneTimePurchase: false 
         }),
       });
   
