@@ -19,6 +19,8 @@ interface EmailOptions {
   text: string;
   html?: string;
   cc?: string;
+  bcc?: string;
+
 }
 
 export const sendEmail = async (options: EmailOptions) => {
@@ -26,6 +28,7 @@ export const sendEmail = async (options: EmailOptions) => {
     const info = await transporter.sendMail({
       from: `Bid Notification <${process.env.MAIL_FROM}>`,
       to: options.to,
+      bcc: options.bcc,
       subject: options.subject,
       text: options.text,
       html: options.html || options.text,
