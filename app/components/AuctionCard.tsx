@@ -37,10 +37,17 @@ export default function AuctionCard({ config, products }: any) {
   const windowHeight = window.innerHeight || 1920;
   const viewSize = Math.max(windowWidth, windowHeight) / pixelSize;
   const [showLoginAlert, setShowLoginAlert] = useState(false);
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
+  const [productForm, setProductForm] = useState({
+    title: "",
+    images: [] as string[],
+    url: ""
+  });
+  const [isProcessingBuyNow, setIsProcessingBuyNow] = useState(false);
 
   const productMap = useRef<Record<number, Product>>({});
   const dragJustEnded = useRef(false);
-  
+
   const isAreaOverlapping = useCallback(
     (x: number, y: number, width: number, height: number): boolean => {
       for (const zone of auctionZones) {
@@ -255,10 +262,10 @@ export default function AuctionCard({ config, products }: any) {
           zone.status === "sold"
             ? "#00c800"
             : zone.status === "expired"
-            ? "#c80000"
-            : zone.bids?.length
-            ? "rgb(255, 111, 0)"
-            : "#0064ff";
+              ? "#c80000"
+              : zone.bids?.length
+                ? "rgb(255, 111, 0)"
+                : "#0064ff";
         ctx.lineWidth = 2;
         ctx.strokeRect(zoneX, zoneY, zoneWidth, zoneHeight);
 
@@ -267,10 +274,10 @@ export default function AuctionCard({ config, products }: any) {
             zone.status === "sold"
               ? "#004d00"
               : zone.status === "expired"
-              ? "#800000"
-              : zone.bids?.length
-              ? "rgb(255, 111, 0)"
-              : "#003366";
+                ? "#800000"
+                : zone.bids?.length
+                  ? "rgb(255, 111, 0)"
+                  : "#003366";
           ctx.font = "bold 12px Arial";
           ctx.textAlign = "center";
 
@@ -285,11 +292,11 @@ export default function AuctionCard({ config, products }: any) {
               (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
             );
             const timeLeft = formatTimeRemaining(zone.expiryDate);
-          ctx.fillText(
-             timeLeft,
-            zoneX + zoneWidth / 2,
-            zoneY + zoneHeight / 2 + 15
-          );
+            ctx.fillText(
+              timeLeft,
+              zoneX + zoneWidth / 2,
+              zoneY + zoneHeight / 2 + 15
+            );
 
           }
         }
@@ -621,8 +628,132 @@ export default function AuctionCard({ config, products }: any) {
     }
   };
 
+  const handleBuyNowClick = () => {
+    setShowAuctionModal(false);
+    setShowBuyNowModal(true);
+    setProductForm({
+      title: "",
+      images: [],
+      url: ""
+    });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const newImages: string[] = [];
+
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            newImages.push(event.target.result as string);
+            if (newImages.length === files.length) {
+              setProductForm(prev => ({
+                ...prev,
+                images: [...prev.images, ...newImages],
+              }));
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setProductForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleInstantBuyNow = async () => {
+    if (!currentSelection || !productForm.title) {
+      setError("Please fill in all required fields");
+      return;
+    }
+
+    const { x, y, width, height } = currentSelection;
+    if (isAreaOverlapping(x, y, width, height)) {
+      setError("This area overlaps with an existing Zone");
+      return;
+    }
+
+    setIsProcessingBuyNow(true);
+    try {
+      // First, create the auction zone
+      const auctionEndDate = new Date(
+        Date.now() + auctionDuration * 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      const zoneResponse = await fetch("/api/auction-zones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          x: currentSelection.x,
+          y: currentSelection.y,
+          width: currentSelection.width,
+          height: currentSelection.height,
+          productIds: currentSelection.products.map((p: any) => p._id),
+          isEmpty: currentSelection.isEmpty,
+          status: "active",
+          auctionEndDate: auctionEndDate,
+          buyNowPrice: buyNowPrice,
+          totalPixels: currentSelection.totalPixels,
+          pixelPrice: pixelPrice,
+        }),
+      });
+
+      if (!zoneResponse.ok) {
+        if (zoneResponse.status === 409) {
+          throw new Error("Cannot add new zones while another zone is active");
+        }
+        throw new Error("Failed to create auction zone");
+      }
+
+      const zoneData = await zoneResponse.json();
+      const createdZoneId = zoneData._id;
+
+    const totalAmount = (currentSelection?.totalPixels ?? 0) * buyNowPrice;
+
+      const paymentResponse = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?._id,
+          pixelCount: currentSelection.totalPixels,
+          totalPrice: totalAmount,
+          productData: productForm,
+          isOneTimePurchase: true,
+          isBuyNow: true,
+          targetZoneId: createdZoneId,
+        }),
+      });
+
+      const paymentData = await paymentResponse.json();
+
+      if (paymentData.error) {
+        throw new Error(paymentData.error);
+      }
+
+      if (paymentData.id && paymentData.url) {
+        // Redirect to Stripe checkout
+        window.location.href = paymentData.url;
+      } else {
+        throw new Error("Missing checkout session URL");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to process instant purchase");
+      console.error("Buy now error:", err);
+    } finally {
+      setIsProcessingBuyNow(false);
+    }
+  };
+
   const handleClick = (e: React.MouseEvent) => {
-    // Skip click if we just finished dragging
     if (dragJustEnded.current) {
       dragJustEnded.current = false;
       return;
@@ -659,7 +790,7 @@ export default function AuctionCard({ config, products }: any) {
       router.push(`/product/${product._id}`);
     }
   };
-   
+
   useEffect(() => {
     drawCanvas();
   }, [drawCanvas]);
@@ -670,25 +801,24 @@ export default function AuctionCard({ config, products }: any) {
         <div className="card-body">
           <div className="position-relative">
             {showLoginAlert && (
-          <div
-            style={{
-              position: "fixed",
-              top: "20px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              backgroundColor: "#ff4444",
-              color: "white",
-              padding: "10px 20px",
-              borderRadius: "5px",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-              zIndex: 2000,
-              animation: "fadeInOut 2s ease-in-out",
-            }}
-          >
-            You need to log in first to create an auction zone.
-          </div>
-        )}
-
+              <div
+                style={{
+                  position: "fixed",
+                  top: "20px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  backgroundColor: "#ff4444",
+                  color: "white",
+                  padding: "10px 20px",
+                  borderRadius: "5px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                  zIndex: 2000,
+                  animation: "fadeInOut 2s ease-in-out",
+                }}
+              >
+                You need to log in first to create an auction zone.
+              </div>
+            )}
 
             <div
               ref={containerRef}
@@ -698,15 +828,6 @@ export default function AuctionCard({ config, products }: any) {
                 paddingBottom: 0,
               }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  bottom: 0,
-                }}
-              >
-               
-              </div>
               <div>
                 <canvas
                   ref={canvasRef}
@@ -718,8 +839,8 @@ export default function AuctionCard({ config, products }: any) {
                     cursor: isAuthUser
                       ? "pointer"
                       : hoveredProduct || hoveredZone
-                      ? "pointer"
-                      : "default",
+                        ? "pointer"
+                        : "default",
                     backgroundColor: "#fff",
                   }}
                 />
@@ -736,13 +857,12 @@ export default function AuctionCard({ config, products }: any) {
                   padding: "10px",
                   borderRadius: "5px",
                   boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                  border: `2px solid ${
-                    hoveredZone.status === "sold"
+                  border: `2px solid ${hoveredZone.status === "sold"
                       ? "#00c800"
                       : hoveredZone.status === "expired"
-                      ? "#c80000"
-                      : "#0064ff"
-                  }`,
+                        ? "#c80000"
+                        : "#0064ff"
+                    }`,
                   cursor: "pointer !important",
                   zIndex: 1000,
                 }}
@@ -860,8 +980,8 @@ export default function AuctionCard({ config, products }: any) {
                 )}
 
                 <div className="row">
-                
- <div className="col-md-6 mb-3">
+
+                  <div className="col-md-6 mb-3">
                     <label className="form-label fw-bold">
                       Instant Buy Price Per Pixel ($)
                     </label>
@@ -870,7 +990,7 @@ export default function AuctionCard({ config, products }: any) {
                       className="form-control"
                       step="1"
                       min={minBuyNowPrice}
-                      placeholder={`Min $${minBuyNowPrice.toFixed(2)} per pixel`}
+                      placeholder={`Min ${minBuyNowPrice.toFixed(2)} per pixel`}
                       value={buyNowPrice}
                       onChange={(e) => {
                         const newValue = parseFloat(e.target.value);
@@ -884,7 +1004,7 @@ export default function AuctionCard({ config, products }: any) {
                     <small className="text-muted">
                       Minimum price per pixel: ${minBuyNowPrice.toFixed(2)}
                     </small>
-                  </div>  
+                  </div>
                   <div className="col-md-6 mb-3">
                     <label className="form-label fw-bold">
                       Bid Price Per Pixel ($)
@@ -896,7 +1016,7 @@ export default function AuctionCard({ config, products }: any) {
                       step="1"
                       required
                       value={pixelPrice}
-                      placeholder={`Min $${minPixelPrice} per pixel`}
+                      placeholder={`Min ${minPixelPrice} per pixel`}
                       onChange={(e) => {
                         const newValue = parseFloat(e.target.value);
                         setPixelPrice(
@@ -905,15 +1025,12 @@ export default function AuctionCard({ config, products }: any) {
                             : Math.max(minPixelPrice, newValue)
                         );
                       }}
-                      
+
                     />
                     <small className="text-muted">
                       Price per pixel for bids
                     </small>
                   </div>
-
-                 
-
 
                   <div className="col-md-6 mb-3 d-flex align-items-end">
                     <div className="w-100">
@@ -924,8 +1041,7 @@ export default function AuctionCard({ config, products }: any) {
                     </div>
                   </div>
 
-
-                    <div className="col-md-6 mb-1 gap-4 mb-6">
+                  <div className="col-md-6 mb-1 gap-4 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Auction Duration (Days)
@@ -936,10 +1052,8 @@ export default function AuctionCard({ config, products }: any) {
                         value={7}
                         onChange={(e) => setAuctionDuration(Number(e.target.value))}
                         disabled
-                        />
-                      
+                      />
                     </div>
-                    <div></div>
                   </div>
                 </div>
 
@@ -1026,6 +1140,13 @@ export default function AuctionCard({ config, products }: any) {
                 </button>
                 <button
                   type="button"
+                  className="btn btn-success"
+                  onClick={handleBuyNowClick}
+                >
+                  Buy Now (${(currentSelection.width * currentSelection.height * buyNowPrice).toFixed(2)})
+                </button>
+                <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={() => {
                     saveAuctionZones();
@@ -1039,7 +1160,170 @@ export default function AuctionCard({ config, products }: any) {
           </div>
         </div>
       )}
-      
+
+      {showBuyNowModal && currentSelection && (
+        <div
+          className="modal show"
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1051,
+            overflow: "auto",
+          }}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered modal-lg"
+            style={{
+              maxWidth: "600px",
+              margin: "1.75rem auto",
+            }}
+          >
+            <div
+              className="modal-content"
+              style={{
+                maxHeight: "90vh",
+                overflow: "hidden",
+              }}
+            >
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">Instant Buy - Complete Purchase</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => {
+                    setShowBuyNowModal(false);
+                    setShowAuctionModal(true);
+                  }}
+                  aria-label="Close"
+                />
+              </div>
+
+              <div
+                className="modal-body"
+                style={{
+                  overflowY: "auto",
+                  padding: "20px",
+                }}
+              >
+                {error && (
+                  <div className="alert alert-danger">
+                    <strong>Error:</strong> {error}
+                  </div>
+                )}
+
+                <div className="alert alert-success mb-4">
+                  <h6 className="fw-bold mb-3">Purchase Summary</h6>
+                  <div className="row">
+                    <div className="col-6">
+                      <p className="mb-1"><strong>Total Amount:</strong></p>
+                      <p className="fs-4 text-success fw-bold">
+                        ${(currentSelection.width * currentSelection.height * buyNowPrice).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="col-6">
+                      <p className="mb-1"><strong>Zone Size:</strong></p>
+                      <p>{currentSelection.width}x{currentSelection.height} pixels</p>
+                      <p className="mb-1"><strong>Total Pixels:</strong></p>
+                      <p>{currentSelection.totalPixels} pixels</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label fw-bold">
+                    Pixel Title <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={productForm.title}
+                    onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
+                    placeholder="Enter title for your pixel content"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label fw-bold">Pixel Image</label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    multiple
+                  />
+                  {productForm.images.length > 0 && (
+                    <div className="d-flex flex-wrap gap-2 mt-3">
+                      {productForm.images.map((img, index) => (
+                        <div key={index} className="position-relative" style={{ width: "80px", height: "80px" }}>
+                          <img
+                            src={img}
+                            alt={`Preview ${index}`}
+                            className="w-100 h-100 object-fit-cover rounded"
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm position-absolute top-0 end-0 rounded-circle p-0"
+                            style={{ width: "20px", height: "20px", fontSize: "12px" }}
+                            onClick={() => removeImage(index)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label fw-bold">Pixel URL</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    value={productForm.url}
+                    onChange={(e) => setProductForm({ ...productForm, url: e.target.value })}
+                    placeholder="https://example.com"
+                  />
+                  <small className="text-muted">Optional: Add a link to your website or content</small>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowBuyNowModal(false);
+                    setShowAuctionModal(true);
+                  }}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={handleInstantBuyNow}
+                  disabled={isProcessingBuyNow || !productForm.title}
+                >
+                  {isProcessingBuyNow ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    `Complete Purchase - ${(currentSelection.width * currentSelection.height * buyNowPrice).toFixed(2)}`
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

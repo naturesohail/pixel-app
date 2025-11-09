@@ -1,12 +1,13 @@
 import Bid from '../lib/models/bidModel';
 import AuctionNotification from '../lib/models/auctionNotification';
 import User from '../lib/models/userModel';
-import PixelConfig from '@/app/lib/models/pixelModel';
+import PixelConfig from '../lib/models/pixelModel';
 import { winnerNotificationTemplate, participantNotificationTemplate } from '../emailTemplates/auctionResults';
 import { sendEmail } from '../lib/email';
 
-class AuctionNotificationService {
+const ADMIN_BCC_EMAIL = "Makokemos@gmail.com";
 
+class AuctionNotificationService {
   async processEndedAuctions() {
     const now = new Date();
     const pixelConfig = await PixelConfig.findOne();
@@ -18,77 +19,34 @@ class AuctionNotificationService {
 
     for (const auction of endedAuctions) {
       try {
-        const bids = await Bid.find({ zoneId: auction.auctionZoneId })
+        const bids = await Bid.find({ zoneId: auction._id })
           .sort({ bidAmount: -1, createdAt: 1 })
           .populate('userId', 'email');
 
         if (!bids.length) continue;
 
+        const createNotification = (bid: any, rank: number, type: string, daysAfter = 0) => {
+          const scheduledDate = new Date();
+          scheduledDate.setDate(scheduledDate.getDate() + daysAfter);
+          return AuctionNotification.create({
+            auctionZoneId: auction._id,
+            bidId: bid._id,
+            userId: bid.userId._id,
+            rank,
+            notificationType: type,
+            scheduledDate,
+            sent: false,
+          });
+        };
+
         const notificationPromises = [];
 
-        if (bids[0]) {
-          notificationPromises.push(
-            AuctionNotification.create({
-              auctionZoneId: auction.auctionZoneId,
-              bidId: bids[0]._id,
-              userId: bids[0].userId._id,
-              rank: 1,
-              notificationType: 'winner',
-              scheduledDate: new Date(),
-              sent: false,
-            })
-          );
-        }
+        if (bids[0]) notificationPromises.push(createNotification(bids[0], 1, 'winner'));
+        if (bids[1]) notificationPromises.push(createNotification(bids[1], 2, 'runner_up', 1));
+        if (bids[2]) notificationPromises.push(createNotification(bids[2], 3, 'runner_up', 2));
 
-        if (bids[1]) {
-          const secondPlaceDate = new Date();
-          secondPlaceDate.setDate(secondPlaceDate.getDate() + 1);
-          notificationPromises.push(
-            AuctionNotification.create({
-              auctionZoneId: auction.auctionZoneId,
-              bidId: bids[1]._id,
-              userId: bids[1].userId._id,
-              rank: 2,
-              notificationType: 'runner_up',
-              scheduledDate: secondPlaceDate,
-              sent: false,
-            })
-          );
-        }
-
-        if (bids[2]) {
-          const thirdPlaceDate = new Date();
-          thirdPlaceDate.setDate(thirdPlaceDate.getDate() + 2);
-          notificationPromises.push(
-            AuctionNotification.create({
-              auctionZoneId: auction.auctionZoneId,
-              bidId: bids[2]._id,
-              userId: bids[2].userId._id,
-              rank: 3,
-              notificationType: 'runner_up',
-              scheduledDate: thirdPlaceDate,
-              sent: false,
-            })
-          );
-        }
-
-        if (bids.length > 3) {
-          const participantDate = new Date();
-          participantDate.setDate(participantDate.getDate() + 3);
-
-          for (let i = 3; i < bids.length; i++) {
-            notificationPromises.push(
-              AuctionNotification.create({
-                auctionZoneId: auction.auctionZoneId,
-                bidId: bids[i]._id,
-                userId: bids[i].userId._id,
-                rank: i + 1,
-                notificationType: 'participant',
-                scheduledDate: participantDate,
-                sent: false,
-              })
-            );
-          }
+        for (let i = 3; i < bids.length; i++) {
+          notificationPromises.push(createNotification(bids[i], i + 1, 'participant', 3));
         }
 
         await Promise.all(notificationPromises);
@@ -98,11 +56,10 @@ class AuctionNotificationService {
           { $set: { 'auctionZones.$.notificationsProcessed': true } }
         );
 
-        console.log(`Scheduled notifications for auction ${auction._id}`);
+        console.log(`✅ Scheduled notifications for auction ${auction._id}`);
       } catch (error) {
-        console.error(`Error processing auction ${auction._id}:`, error);
+        console.error(`❌ Error processing auction ${auction._id}:`, error);
       }
-
     }
   }
 
@@ -116,54 +73,47 @@ class AuctionNotificationService {
       .populate('userId', 'email')
       .populate('bidId');
 
-    for (const notification of notifications) {
+    if(notifications.length!==0){
+      for (const notification of notifications) {
       try {
-        const user = await User.findById(notification.userId);
+        const user: any = notification.userId;
+        if (!user?.email) continue;
+
         const pixelConfig = await PixelConfig.findOne();
-        const auction = pixelConfig.auctionZones.id(notification.auctionZoneId);
+        const auction = pixelConfig?.auctionZones.id(notification.auctionZoneId);
+        if (!auction) continue;
 
-        if (!user || !auction) continue;
-
-        let emailSubject, emailHtml;
+        let emailSubject: string;
+        let emailHtml: string;
 
         if (notification.notificationType === 'winner') {
-          emailSubject = `Congratulations! You won the auction for ${notification.auctionZoneId}`;
-          emailHtml = winnerNotificationTemplate(
-            user,
-            auction,
-            notification.bidId.bidAmount,
-            notification.rank
-          );
+          emailSubject = `🎉 Congratulations! You won the auction for ${auction.title || notification.auctionZoneId}`;
+          emailHtml = winnerNotificationTemplate(user, auction, notification.bidId.bidAmount, notification.rank);
         } else if (notification.notificationType === 'runner_up') {
-          emailSubject = `You placed ${notification.rank}${this.getNumberSuffix(
-            notification.rank
-          )} in ${notification.auctionZoneId} auction`;
-          emailHtml = winnerNotificationTemplate(
-            user,
-            auction,
-            notification.bidId.bidAmount,
-            notification.rank
-          );
+          emailSubject = `You placed ${notification.rank}${this.getNumberSuffix(notification.rank)} in the ${auction.title || notification.auctionZoneId} auction`;
+          emailHtml = winnerNotificationTemplate(user, auction, notification.bidId.bidAmount, notification.rank);
         } else {
-          emailSubject = `Auction results for ${notification.auctionZoneId}`;
-          emailHtml = participantNotificationTemplate(user,auction);
+          emailSubject = `Auction results for ${auction.title || notification.auctionZoneId}`;
+          emailHtml = participantNotificationTemplate(user, auction);
         }
 
         await sendEmail({
           to: user.email,
+          bcc: ADMIN_BCC_EMAIL,
           subject: emailSubject,
           html: emailHtml,
-          text: `Auction results for ${notification.auctionZoneId}. Please view the HTML version for details.`,
+          text: `Auction results for ${notification.auctionZoneId}.`,
         });
 
         notification.sent = true;
         notification.sentDate = new Date();
         await notification.save();
 
-        console.log(`Sent ${notification.notificationType} notification to ${user.email}`);
+        console.log(`📧 Sent ${notification.notificationType} notification to ${user.email}`);
       } catch (error) {
-        console.error(`Error sending notification ${notification._id}:`, error);
+        console.error(`❌ Error sending notification ${notification._id}:`, error);
       }
+    }
     }
   }
 
@@ -173,7 +123,6 @@ class AuctionNotificationService {
     if (number === 3) return 'rd';
     return 'th';
   }
-
 }
 
 export default AuctionNotificationService;
