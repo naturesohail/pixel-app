@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     user.resetToken = resetToken;
     user.resetTokenExpiry = new Date(resetTokenExpiry);
     await user.save();
+    
 
     const resetLink = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${resetToken}`;
 
