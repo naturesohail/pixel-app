@@ -36,6 +36,7 @@ export async function PATCH(request, { params }) {
         });
 
         
+        
         const verificationMailOptions = {
           from: `"${process.env.APP_NAME || 'Platform'}" <${process.env.MAIL_USER}>`,
           to: user.email,
