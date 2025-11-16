@@ -48,6 +48,14 @@ export async function POST(req: Request) {
     }
 
 
+    const existPhone = await User.findOne({ phone });
+
+    if (existPhone) {
+      return NextResponse.json(
+        { error: "Phone already exists" },
+        { status: 400 }
+      );
+    }
 
 
     const hashedPassword = await bcrypt.hash(password, 10);
