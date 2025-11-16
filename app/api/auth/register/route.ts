@@ -38,14 +38,14 @@ export async function POST(req: Request) {
       );
     }
 
-   const existEmail = await User.findOne({ email });
+    const existEmail = await User.findOne({ email });
 
-if (existEmail) {
-  return NextResponse.json(
-    { error: "Email already exists" },
-    { status: 400 }
-  );
-}
+    if (existEmail) {
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 400 }
+      );
+    }
 
 
 
