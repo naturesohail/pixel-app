@@ -11,15 +11,15 @@ export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const { 
-      name, 
-      email, 
-      phone, 
-      password, 
-      industry,   
+    const {
+      name,
+      email,
+      phone,
+      password,
+      industry,
       website,
       businessDescription,
-      companyName 
+      companyName
     } = await req.json();
 
     if (!mongoose.Types.ObjectId.isValid(industry)) {
@@ -31,19 +31,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Industry not found" }, { status: 404 });
     }
 
-    if (!companyName || !name || !email || !password || !phone || !industry || !website || !businessDescription) { 
+    if (!companyName || !name || !email || !password || !phone || !industry || !website || !businessDescription) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
       );
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
 
+    const existEmail = await User.find({
+      email: email
+    });
+
+    if (existEmail) {
+      return NextResponse.json(
+        { error: "email already exist" },
+        { status: 400 }
+      );
+    }
+
+
+
+    const hashedPassword = await bcrypt.hash(password, 10);
     const createUser = await User.create({
       name,
       email,
       phone,
-      industry, 
+      industry,
       website,
       businessDescription,
       password: hashedPassword,
@@ -53,7 +66,7 @@ export async function POST(req: Request) {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
       port: parseInt(process.env.MAIL_PORT || '465'),
-      secure: true, 
+      secure: true,
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASSWORD,
@@ -92,7 +105,7 @@ export async function POST(req: Request) {
     };
 
     const adminMailOptions = {
-      from: `"${process.env.APP_NAME }"`,
+      from: `"${process.env.APP_NAME}"`,
       to: process.env.ADMIN_NOTIFICATION_EMAIL || 'aiadmin@datanapp.com',
       subject: "New User Registration Requires Verification",
       html: `
@@ -130,12 +143,12 @@ export async function POST(req: Request) {
 
     console.log("Emails sent successfully to user and admin");
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "User created successfully. Verification required.",
-      user: createUser 
+      user: createUser
     }, { status: 200 });
   } catch (error) {
     console.error("Registration error:", error);
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    return NextResponse.json({ error: "Registration Failed", }, { status: 500 });
   }
 }

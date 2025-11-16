@@ -56,9 +56,9 @@ class AuctionNotificationService {
           { $set: { 'auctionZones.$.notificationsProcessed': true } }
         );
 
-        console.log(`✅ Scheduled notifications for auction ${auction._id}`);
+        // console.log(`Scheduled notifications for auction ${auction._id}`);
       } catch (error) {
-        console.error(`❌ Error processing auction ${auction._id}:`, error);
+        console.error(`Error processing auction ${auction._id}:`, error);
       }
     }
   }
@@ -87,7 +87,7 @@ class AuctionNotificationService {
         let emailHtml: string;
 
         if (notification.notificationType === 'winner') {
-          emailSubject = `🎉 Congratulations! You won the auction for ${auction.title || notification.auctionZoneId}`;
+          emailSubject = `Congratulations! You won the auction for ${auction.title || notification.auctionZoneId}`;
           emailHtml = winnerNotificationTemplate(user, auction, notification.bidId.bidAmount, notification.rank);
         } else if (notification.notificationType === 'runner_up') {
           emailSubject = `You placed ${notification.rank}${this.getNumberSuffix(notification.rank)} in the ${auction.title || notification.auctionZoneId} auction`;
@@ -109,9 +109,9 @@ class AuctionNotificationService {
         notification.sentDate = new Date();
         await notification.save();
 
-        console.log(`📧 Sent ${notification.notificationType} notification to ${user.email}`);
+        // console.log(`Sent ${notification.notificationType} notification to ${user.email}`);
       } catch (error) {
-        console.error(`❌ Error sending notification ${notification._id}:`, error);
+        // console.error(`Error sending notification ${notification._id}:`, error);
       }
     }
     }

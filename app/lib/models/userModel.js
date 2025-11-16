@@ -21,7 +21,6 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: true,
-      unique: true,
     },
     industry: {
       type: mongoose.Schema.Types.ObjectId,

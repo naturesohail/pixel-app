@@ -7,11 +7,10 @@ interface EmailOptions {
   html?: string;
 }
     
-// Create a transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
+  secure: false, 
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -28,10 +27,10 @@ export const sendEmail = async (options: EmailOptions) => {
       html: options.html || options.text,
     });
 
-    console.log(`Email sent: ${info.messageId}`);
+    // console.log(`Email sent: ${info.messageId}`);
     return info;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    // console.error('Failed to send email:', error);
     throw error;
   }
 };
