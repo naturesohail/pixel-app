@@ -1,18 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: { 
-    unoptimized: true,
-    domains: ['pixel-app-l628.vercel.app'],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
-  },
+ 
+       turbopack: {
+                 root: __dirname
+       },
+        images: {
+            remotePatterns: [
+                        {
+                         protocol: "https",
+                         hostname: "aioftheworld.com",
+                         pathname: "/**"
+                        }
+                          ] 
+       },
     reactStrictMode: true,
     async headers() {
       return [
@@ -32,5 +32,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-
-
