@@ -1496,7 +1496,7 @@ Subscribe
   box-shadow: none;
 }
 
-.subscribe form input::focus {
+.subscribe form input:focus {
   border-color: #2a2a2a;
   border-radius: 0px;
 }
@@ -2217,7 +2217,7 @@ contact Us Page
   box-shadow: none;
 }
 
-.contact-us form input::focus {
+.contact-us form input:focus {
   border-color: #2a2a2a;
   border-radius: 0px;
 }
@@ -2240,7 +2240,7 @@ contact Us Page
   box-shadow: none;
 }
 
-.contact-us form textarea::focus {
+.contact-us form textarea:focus {
   border-color: #2a2a2a;
   border-radius: 0px;
 }
