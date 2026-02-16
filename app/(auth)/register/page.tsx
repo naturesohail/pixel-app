@@ -225,7 +225,7 @@ export default function Register() {
               </div>
               <input
                 id="website"
-                type="url"
+                type="text"
                 required
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-black"
                 value={website}

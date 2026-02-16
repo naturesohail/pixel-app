@@ -57,6 +57,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const admin = await User.findOne({ isAdmin: true });
+
+    if (!admin) {
+      return NextResponse.json({ error: "Admin not found" }, { status: 500 });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const createUser = await User.create({
@@ -70,15 +75,7 @@ export async function POST(req: Request) {
       companyName: companyName || "",
     });
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: parseInt(process.env.MAIL_PORT || '465'),
-      secure: true,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    });
+
 
     const userMailOptions = {
       from: `${process.env.APP_NAME}`,
@@ -113,7 +110,7 @@ export async function POST(req: Request) {
 
     const adminMailOptions = {
       from: `"${process.env.APP_NAME}"`,
-      to: process.env.ADMIN_NOTIFICATION_EMAIL || 'aiadmin@datanapp.com',
+      to: admin.email,
       subject: "New User Registration Requires Verification",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -143,17 +140,42 @@ export async function POST(req: Request) {
       `,
     };
 
-    await Promise.all([
-      transporter.sendMail(userMailOptions),
-      transporter.sendMail(adminMailOptions)
-    ]);
 
-    console.log("Emails sent successfully to user and admin");
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: Number(process.env.MAIL_PORT),
+      secure: true,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASSWORD,
+      },
+    });
+
+    try {
+      await Promise.all([
+        transporter.sendMail(userMailOptions),
+        transporter.sendMail(adminMailOptions)
+
+        
+      ]);
+      console.log("Emails sent successfully to user and admin", `${admin.email} and the user emailis ${email}`);
+      console.log("Emails sent");
+    } catch (err) {
+      console.error("Email sending failed:", err);
+    }
+
+    const userResponse = createUser.toObject();
+    delete userResponse.password;
+
+    
+
 
     return NextResponse.json({
       message: "User created successfully. Verification required.",
-      user: createUser
+      user: userResponse
     }, { status: 200 });
+
+
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json({ error: "Registration Failed", }, { status: 500 });
