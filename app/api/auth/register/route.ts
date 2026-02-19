@@ -9,6 +9,7 @@ import nodemailer from 'nodemailer';
 
 export async function POST(req: Request) {
   try {
+   
     await connectDB();
 
     const {
@@ -80,11 +81,11 @@ export async function POST(req: Request) {
     const userMailOptions = {
       from: `${process.env.APP_NAME}`,
       to: email,
-      subject: "Your Account Has Been Created - Verification Required",
+      subject: "Your Account Has Been Created ",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Welcome to Our Platform, ${name}!</h2>
-          <p>Thank you for registering with us. Your account has been successfully created but requires verification before you can access all features.</p>
+          <p>Thank you for registering with us.</p>
           
           <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0;">
             <h3 style="color: #333; margin-top: 0;">Account Details:</h3>
@@ -97,7 +98,6 @@ export async function POST(req: Request) {
             </ul>
           </div>
           
-          <p style="color: #e74c3c; font-weight: bold;">Your account is currently pending verification. You will receive another email once your account has been verified by our admin team.</p>
           
           <p>If you have any questions, please don't hesitate to contact us.</p>
           
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     const adminMailOptions = {
       from: `"${process.env.APP_NAME}"`,
       to: admin.email,
-      subject: "New User Registration Requires Verification",
+      subject: "New User Registration",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">New User Registration</h2>
@@ -131,7 +131,6 @@ export async function POST(req: Request) {
             </ul>
           </div>
           
-          <p style="font-weight: bold;">Please verify this account in the admin panel.</p>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
             <p style="color: #777;">This is an automated notification from ${process.env.APP_NAME}.</p>

@@ -1,4 +1,6 @@
-import User from "@/app/lib/models/userModel";
+
+import User from "../../../lib/models/userModel";
+
 import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/db";
 import nodemailer from 'nodemailer';
@@ -6,7 +8,7 @@ import nodemailer from 'nodemailer';
 
 
 export async function PATCH(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   await connectDB();
   
   try {
@@ -94,7 +96,7 @@ export async function PATCH(request, { params }) {
 
 
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } =await params;
   await connectDB();
   
   try {
