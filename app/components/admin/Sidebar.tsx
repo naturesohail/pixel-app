@@ -38,6 +38,8 @@ export default function Sidebar() {
       ] 
     },
     { name: 'Bidders', icon: UserGroupIcon, path: '/admin/bidders' },
+    { name: 'Users', icon: UserGroupIcon, path: '/admin/users' },
+
     { name: 'Queries', icon: QuestionMarkCircleIcon, path: '/admin/queries' },
     { name: 'Settings', icon: TagIcon, path: '/admin/settings' },
     

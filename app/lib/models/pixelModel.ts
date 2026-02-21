@@ -36,17 +36,6 @@ interface IPixelConfig extends Document {
   updatedAt: Date;
 }
 
-const BidSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  bidAmount: { type: Number, required: true },
-  createdAt: { type: Date, default: Date.now },
-  productId: { type: Schema.Types.ObjectId, ref: "Product" },
-  status: {
-    type: String,
-    enum: ["active", "won", "lost", "expired"],
-    default: "active",
-  },
-});
 const AuctionZoneSchema = new Schema(
   {
     x: { type: Number, required: true },
@@ -71,7 +60,13 @@ const AuctionZoneSchema = new Schema(
         notificationsProcessed: {
       type: Boolean,
       default: false
-    }
+    },
+   createdBy: {
+  type: Schema.Types.ObjectId,
+  ref: "User"
+}
+
+
 
   },
   { _id: true, timestamps: true }

@@ -138,7 +138,7 @@ export default function Header() {
                   <li className="relative">
                     <button
                       ref={userDropdownButtonRef}
-                      className="flex items-center space-x-2 hover:text-blue-600 text-gray-800 font-medium"
+                      className="flex items-center space-x-2  text-gray-800 font-medium"
                       onClick={() => setDropdownOpen(!dropdownOpen)}
                     >
                       <FaUser size={20} />
@@ -153,18 +153,37 @@ export default function Header() {
                         
                         <Link
                           href="/transactions"
-                          className="block px-4 py-2 hover:bg-gray-200 text-gray-800"
+                          className="block px-4 py-2  text-gray-800"
                           onClick={() => setDropdownOpen(false)}
                         >
                           Transactions 
                         </Link>
+
+
+                         <Link
+                          href="/my-auction-zones"
+                          className="block px-4 py-2  text-gray-800 mt-22"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          My&nbsp;Auction&nbsp;Zone
+                        </Link>
+
+                         <Link
+                          href="/my-bids"
+                          className="block px-4 py-2  text-gray-800 mt-22"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          My&nbsp;Bids
+                        </Link>
                         <button
+
+                        
                           
-                          className="w-full text-left px-4 py-2 hover:bg-gray-200 text-gray-800"
+                          className="w-full text-left px-4 py-2  text-gray-800 "
                         >
                         <Link
                           href="/forgot-password"
-                          className="block py-2 hover:bg-gray-200 text-gray-800"
+                          className="block py-2  text-gray-800"
                           >
                             Forget&nbsp;Password
                           </Link>                        
@@ -173,7 +192,7 @@ export default function Header() {
                           onClick={() => {
                             logout();
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-200 text-gray-800"
+                          className="w-full text-left px-4 py-2  text-gray-800"
                         >
                           Logout
                         </button>

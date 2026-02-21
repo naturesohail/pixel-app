@@ -2,7 +2,6 @@ import User from "@/app/lib/models/userModel";
 import Transaction from "@/app/lib/models/transactionModel";
 import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/db";
-import mongoose from "mongoose";
 
 export async function GET(req) {
   try {
@@ -15,22 +14,14 @@ export async function GET(req) {
 
     const skip = (page - 1) * limit;
 
-    // ✅ Step 1: Get unique userIds from transactions
-    const bidderUserIds = await Transaction.distinct("userId");
+    // ✅ Step 1: Get all bidder userIds (who made payment)
+    const bidderUserIds = await Transaction.distinct("userId", {
+      status: "completed", // optional (recommended)
+    });
 
-    // If no bidders exist
-    if (bidderUserIds.length === 0) {
-      return NextResponse.json({
-        users: [],
-        totalPages: 1,
-        currentPage: page,
-        totalUsers: 0,
-      });
-    }
-
-    // ✅ Step 2: Create search query
+    // ✅ Step 2: Create query for NON-bidders
     const searchQuery = {
-      _id: { $in: bidderUserIds },
+      _id: { $nin: bidderUserIds }, // NOT IN
       isAdmin: false,
       $or: [
         { name: { $regex: search, $options: "i" } },
@@ -59,9 +50,9 @@ export async function GET(req) {
     });
 
   } catch (error) {
-    console.error("Error fetching bidders:", error);
+    console.error("Error fetching non-bidders:", error);
     return NextResponse.json(
-      { error: "Failed to fetch bidders: " + error.message },
+      { error: "Failed to fetch non-bidders: " + error.message },
       { status: 500 }
     );
   }

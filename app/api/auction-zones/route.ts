@@ -8,41 +8,47 @@ import User from "@/app/lib/models/userModel";
 import { auctionZoneTemplate, sendAuctionEmail } from "@/app/lib/email";
 
 
-
-export async function GET() {
+export async function GET(request: Request) {
   await dbConnect();
 
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    // ✅ Always get latest config first
     const config = await PixelConfig.findOne()
       .sort({ createdAt: -1 })
       .populate("auctionZones.productIds")
-      .populate("auctionZones.currentBidder");
+      .populate("auctionZones.currentBidder")
+      .populate("auctionZones.createdBy");
 
+    // ✅ If no config exists at all
     if (!config) {
-      return NextResponse.json(
-        { error: "Pixel configuration not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: true,
+        auctionZones: [],
+      });
     }
 
-    const now = new Date();
-    const validZones = config.auctionZones.filter((zone: any) => {
-      if (zone.expiryDate) {
-        const expiryTime = new Date(zone.expiryDate).getTime();
-        return now.getTime() - expiryTime < 3600000; 
-      }
-      return true;
-    });
+    let zones = config.auctionZones || [];
 
-    if (validZones.length !== config.auctionZones.length) {
-      config.auctionZones = validZones;
-      await config.save();
+
+       
+
+    // ✅ Filter by user AFTER fetching config
+    if (userId) {
+      zones = zones.filter(
+        (zone: any) =>
+          zone.createdBy &&
+          zone.createdBy._id.toString() === userId
+      );
     }
 
     return NextResponse.json({
       success: true,
-      auctionZones: validZones,
+      auctionZones: zones,
     });
+
   } catch (error) {
     console.error("Error fetching auction zones:", error);
     return NextResponse.json(
@@ -51,6 +57,8 @@ export async function GET() {
     );
   }
 }
+
+
 
 export async function POST(request: Request) {
   await dbConnect();
@@ -76,6 +84,12 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+
+    console.log(user._id,'user._id');
+    
+
+
 
     const {
       x,
@@ -151,6 +165,7 @@ export async function POST(request: Request) {
             : 0),
       totalPixels,
       pixelPrice,
+      createdBy: user._id
     };
     
     config.auctionZones.push(newZone);
@@ -158,11 +173,15 @@ export async function POST(request: Request) {
     
     const savedConfig = await PixelConfig.findById(config._id);
     const savedZone = savedConfig.auctionZones[savedConfig.auctionZones.length - 1];
+     const admin = await User.findOne({ isAdmin: true });
     
+        if (!admin) {
+          return NextResponse.json({ error: "Admin not found" }, { status: 500 });
+        }
     try {
       await sendAuctionEmail({
         to: user.email, 
-        cc: process.env.ADMIN_NOTIFICATION_EMAIL,
+        cc: admin.email,
         subject: `New Auction Zone Created - ${width}x${height} at (${x},${y})`,
         text: `A new auction zone has been created with ID: ${savedZone._id}`,
         html: auctionZoneTemplate(savedZone)
