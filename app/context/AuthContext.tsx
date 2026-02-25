@@ -45,69 +45,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("authToken");
     }
   };
-
   useEffect(() => {
-    async function checkLogin() {
-      setIsLoading(true);
+  async function checkLogin() {
+    const localUser = localStorage.getItem("userData");
 
-      const localUser = localStorage.getItem("userData");
-      if (localUser) {
-        try {
-          const parsedUser = JSON.parse(localUser);
+    // Only run API if local user exists
+    if (!localUser) {
+      setIsLoading(false);
+      return;
+    }
 
-            const res = await fetch("/api/auth/me", {
-            method: "GET",
-            credentials: "include",
-          });
+    setIsLoading(true);
 
-          if (res.ok) {
-            const data = await res.json();
+    try {
+      const parsedUser = JSON.parse(localUser);
+      setUser(parsedUser); 
 
-            if (data.user?.isActive) {
-              setUser(data.user);
-              localStorage.setItem("userData", JSON.stringify(data.user));
-            } else {
-              await logout();
-            }
-          } else {
-            await logout();
-          }
-        } catch (e) {
-          console.error("Auth check failed:", e);
-          await logout();
-        } finally {
-          setIsLoading(false);
-        }
+      const res = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        await logout();
         return;
       }
 
-      try {
-        const res = await fetch("/api/auth/me", {
-          method: "GET",
-          credentials: "include",
-        });
+      const data = await res.json();
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.user?.isActive) {
-            setUser(data.user);
-            localStorage.setItem("userData", JSON.stringify(data.user));
-          } else {
-            await logout();
-          }
-        } else {
-          await logout();
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
+      if (data.user?.isActive) {
+        setUser(data.user);
+        localStorage.setItem("userData", JSON.stringify(data.user));
+      } else {
         await logout();
-      } finally {
-        setIsLoading(false);
       }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      await logout();
+    } finally {
+      setIsLoading(false);
     }
+  }
 
-    checkLogin();
-  }, []);
+  checkLogin();
+}, []);
 
   return (
     <AuthContext.Provider

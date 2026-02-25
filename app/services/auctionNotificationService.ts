@@ -21,23 +21,30 @@ class AuctionNotificationService {
       try {
         const bids = await Bid.find({ zoneId: auction._id })
           .sort({ bidAmount: -1, createdAt: 1 })
-          .populate('userId', 'email');
+          .populate('userId');
 
         if (!bids.length) continue;
 
-        const createNotification = (bid: any, rank: number, type: string, daysAfter = 0) => {
-          const scheduledDate = new Date();
-          scheduledDate.setDate(scheduledDate.getDate() + daysAfter);
-          return AuctionNotification.create({
-            auctionZoneId: auction._id,
-            bidId: bid._id,
-            userId: bid.userId._id,
-            rank,
-            notificationType: type,
-            scheduledDate,
-            sent: false,
-          });
-        };
+       const createNotification = (bid: any, rank: number, type: string, daysAfter = 0) => {
+
+        const scheduledDate = new Date();
+        scheduledDate.setDate(scheduledDate.getDate() + daysAfter);
+
+        const paymentDeadline = new Date();
+        paymentDeadline.setDate(paymentDeadline.getDate() + pixelConfig.auctionWinDays);
+
+        return AuctionNotification.create({
+          auctionZoneId: auction._id,
+          bidId: bid._id,
+          userId: bid.userId._id,
+          rank,
+          notificationType: type,
+          scheduledDate,
+          sent: false,
+          isWinnerActive: rank === 1,
+          paymentDeadline: rank === 1 ? paymentDeadline : null
+        });
+      };
 
         const notificationPromises = [];
 
@@ -70,7 +77,7 @@ class AuctionNotificationService {
       sent: false,
       scheduledDate: { $lte: now },
     })
-      .populate('userId', 'email')
+      .populate('userId')
       .populate('bidId');
 
     if(notifications.length!==0){
@@ -117,6 +124,43 @@ class AuctionNotificationService {
     }
   }
 
+  async processWinnerExpiry() {
+
+  const now = new Date();
+
+  const expiredWinners = await AuctionNotification.find({
+    notificationType: "winner",
+    paymentCompleted: false,
+    isWinnerActive: true,
+    paymentDeadline: { $lte: now }
+  });
+
+  for (const winner of expiredWinners) {
+
+    winner.isWinnerActive = false;
+    await winner.save();
+
+    const nextRunner = await AuctionNotification.findOne({
+      auctionZoneId: winner.auctionZoneId,
+      rank: winner.rank + 1
+    }).populate("userId");
+
+    if (!nextRunner) continue;
+
+    const pixelConfig = await PixelConfig.findOne();
+
+    const newDeadline = new Date();
+    newDeadline.setDate(newDeadline.getDate() + pixelConfig.auctionWinDays);
+
+    nextRunner.notificationType = "winner";
+    nextRunner.isWinnerActive = true;
+    nextRunner.paymentDeadline = newDeadline;
+    nextRunner.sent = false;
+    nextRunner.scheduledDate = new Date();
+
+    await nextRunner.save();
+  }
+}
   getNumberSuffix(number: number) {
     if (number === 1) return 'st';
     if (number === 2) return 'nd';
@@ -124,5 +168,6 @@ class AuctionNotificationService {
     return 'th';
   }
 }
+
 
 export default AuctionNotificationService;

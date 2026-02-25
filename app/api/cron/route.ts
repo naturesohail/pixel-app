@@ -5,9 +5,12 @@ export async function GET() {
 
   try {
     const service = new AuctionNotificationService();
+
     await service.processEndedAuctions();
     await service.processScheduledNotifications();
+    await service.processWinnerExpiry();
 
+    console.log('CronExecuted')
     return NextResponse.json({ success: true, message: "Cron executed" });
   }
    

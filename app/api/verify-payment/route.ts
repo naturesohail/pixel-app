@@ -6,6 +6,7 @@ import PixelConfig from "@/app/lib/models/pixelModel";
 import Transaction from "@/app/lib/models/transactionModel";
 import mongoose, { Types } from "mongoose";
 import Bid from "@/app/lib/models/bidModel";
+import auctionNotification from "@/app/lib/models/auctionNotification";
 
 const stripe = new Stripe(
   "sk_test_51R7u7XFWt2YrxyZwTMNvSl4gAgizA6e01XBp4sQGhLFId0qKAH1QdI2jFhlaFtHU9sMuPNHh8XvhB7DDQlfCnYiw00GsRA8POr",
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     const paymentType = metadata.paymentType || "one-time";
     const isBidPayment = paymentType === "winner-bid";
 
+    
     // Handle zone ID for both payment types
     const targetZoneId = metadata.targetZoneId || metadata.zoneId;
     if (!targetZoneId) throw new Error("Missing zone ID");
@@ -65,6 +67,7 @@ export async function POST(request: Request) {
     let productData: any;
     let isOneTimePurchase = false;
 
+    
     if (isBidPayment) {
       // ============= BID PAYMENT BLOCK =============
       if (!metadata.bidId) throw new Error("Missing bid ID for winner payment");
@@ -137,6 +140,7 @@ export async function POST(request: Request) {
       };
     }
 
+
     const [product] = await Product.create([productData], { session: dbSession });
 
     await Transaction.create([{
@@ -148,6 +152,14 @@ export async function POST(request: Request) {
       stripeSessionId: sessionId,
     }], { session: dbSession });
 
+       
+      await auctionNotification.updateOne(
+      { bidId: metadata.bidId },
+      {
+      paymentCompleted: true,
+      isWinnerActive: false,
+      }
+      );
     // Pixel config update
     if (isBidPayment) {
       // For bids: Update the specific zone status

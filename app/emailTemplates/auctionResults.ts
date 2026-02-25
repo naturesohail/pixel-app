@@ -28,14 +28,17 @@ export const winnerNotificationTemplate = (user:any, auctionZone: any, bidAmount
           <p>Hello ${user.name},</p>
           <p>We're excited to inform you that the auction for <strong>${auctionZone._id}</strong> has ended.</p>
           <p>Your bid of <strong>$${bidAmount}</strong> placed you in <strong>${position}${getNumberSuffix(position)}</strong> place!</p>
-          ${position === 1 ? 
-            `<p>As the winner, you can now complete your payment to secure the pixels.</p>
-            <p style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_SITE_URL}/auctions/${auctionZone._id}" class="button">Complete Payment</a>
-            </p>` : 
-            `<p>While you didn't win this auction, your strong bid demonstrates your interest in our pixel marketplace.</p>
-            <p>Keep an eye out for future auctions that might interest you!</p>`
-          }
+         ${position === 1 ? 
+`<p>As the winner, you can now complete your payment to secure the pixels.</p>
+<p style="text-align: center;">
+<a href="${process.env.NEXT_PUBLIC_SITE_URL}/auctions/${auctionZone._id}" class="button">Complete Payment</a>
+</p>` :
+
+`<p>The previous winner did not complete payment, so you now have the opportunity to purchase this auction.</p>
+<p style="text-align: center;">
+<a href="${process.env.NEXT_PUBLIC_SITE_URL}/auctions/${auctionZone._id}" class="button">Complete Payment</a>
+</p>`
+}
         </div>
         <div class="footer">
           <p>Thank you for participating in our Pixel Marketplace.</p>

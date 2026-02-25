@@ -9,44 +9,55 @@ export interface IAuctionNotification extends Document {
   sent: boolean;
   scheduledDate: Date;
   sentDate?: Date;
-}
 
+  paymentDeadline?: Date;
+  isWinnerActive?: boolean;
+  paymentCompleted?: boolean;
+}
 const AuctionNotificationSchema = new Schema({
+
   auctionZoneId: {
     type: Schema.Types.ObjectId,
-    ref: 'PixelConfig.auctionZones',
     required: true
   },
+
   bidId: {
     type: Schema.Types.ObjectId,
     ref: 'Bid',
     required: true
   },
+
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  rank: {
-    type: Number,
-    required: true
-  },
+
+  rank: Number,
+
   notificationType: {
     type: String,
-    enum: ['winner', 'runner_up', 'participant'],
-    required: true
+    enum: ['winner','runner_up','participant']
   },
-  sent: {
+
+  paymentCompleted: {
     type: Boolean,
     default: false
   },
-  scheduledDate: {
-    type: Date,
-    required: true
-  },
-  sentDate: {
-    type: Date
-  }
-}, { timestamps: true });
 
-export default mongoose.models.AuctionNotification || mongoose.model<IAuctionNotification>('AuctionNotification', AuctionNotificationSchema);
+  isWinnerActive: {
+    type: Boolean,
+    default: false
+  },
+
+  paymentDeadline: Date,
+
+  sent: Boolean,
+
+  scheduledDate: Date,
+
+  sentDate: Date
+
+},{timestamps:true})
+export default mongoose.models.AuctionNotification ||
+mongoose.model<IAuctionNotification>('AuctionNotification', AuctionNotificationSchema);
