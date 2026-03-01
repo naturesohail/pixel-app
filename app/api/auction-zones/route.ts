@@ -171,25 +171,29 @@ export async function POST(request: Request) {
     config.auctionZones.push(newZone);
     await config.save(); 
     
-    const savedConfig = await PixelConfig.findById(config._id);
-    const savedZone = savedConfig.auctionZones[savedConfig.auctionZones.length - 1];
+     const savedConfig = await PixelConfig.findById(config._id);
+     const savedZone = savedConfig.auctionZones[savedConfig.auctionZones.length - 1];
      const admin = await User.findOne({ isAdmin: true });
     
-        if (!admin) {
-          return NextResponse.json({ error: "Admin not found" }, { status: 500 });
-        }
-    try {
-      await sendAuctionEmail({
-        to: user.email, 
-        cc: admin.email,
-        subject: `New Auction Zone Created - ${width}x${height} at (${x},${y})`,
-        text: `A new auction zone has been created with ID: ${savedZone._id}`,
-        html: auctionZoneTemplate(savedZone)
-      });
-      console.log("Auction zone creation notification sent successfully");
-    } catch (emailError) {
-      console.error("Failed to send auction zone notification:", emailError);
-    }
+      if (!admin) {
+        return NextResponse.json({ error: "Admin not found" }, { status: 500 });
+      }
+          
+      try {
+       
+        await sendAuctionEmail({
+          to: user.email, 
+          cc: admin.email,
+          subject: `New Auction Zone Created - ${width}x${height} at (${x},${y})`,
+          text: `A new auction zone has been created with ID: ${savedZone._id}`,
+          html: auctionZoneTemplate(savedZone)
+        });
+
+        // console.log("Auction zone creation notification sent successfully");
+      
+      } catch (emailError) {
+        console.error("Failed to send auction zone notification:", emailError);
+      }
 
     return NextResponse.json({
       success: true,
